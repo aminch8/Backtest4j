@@ -5,6 +5,7 @@ import com.auctus.core.utils.NumUtil;
 import com.auctus.core.utils.ZdtUtil;
 import org.ta4j.core.Bar;
 import org.ta4j.core.BarSeries;
+import org.ta4j.core.BaseBarSeriesBuilder;
 import org.ta4j.core.num.Num;
 
 import java.time.DayOfWeek;
@@ -17,16 +18,16 @@ import java.util.stream.Collectors;
 
 public abstract class BarSeriesProvider {
 
-    private BarSeries oneMinuteBarSeries;
-    private BarSeries fiveMinuteBarSeries;
-    private BarSeries fifteenMinutesBarSeries;
-    private BarSeries thirtyMinutesBarSeries;
-    private BarSeries oneHourBarSeries;
-    private BarSeries twoHourBarSeries;
-    private BarSeries fourHourBarSeries;
-    private BarSeries dailyBarSeries;
-    private BarSeries weeklyBarSeries;
-    private BarSeries monthlyBarSeries;
+    private BarSeries oneMinuteBarSeries = new BaseBarSeriesBuilder().withName("M1").build();
+    private BarSeries fiveMinuteBarSeries = new BaseBarSeriesBuilder().withName("M5").build();
+    private BarSeries fifteenMinutesBarSeries = new BaseBarSeriesBuilder().withName("M15").build();;
+    private BarSeries thirtyMinutesBarSeries = new BaseBarSeriesBuilder().withName("M30").build();;
+    private BarSeries oneHourBarSeries = new BaseBarSeriesBuilder().withName("H1").build();;
+    private BarSeries twoHourBarSeries = new BaseBarSeriesBuilder().withName("H2").build();;
+    private BarSeries fourHourBarSeries = new BaseBarSeriesBuilder().withName("H4").build();;
+    private BarSeries dailyBarSeries = new BaseBarSeriesBuilder().withName("D1").build();;
+    private BarSeries weeklyBarSeries = new BaseBarSeriesBuilder().withName("W1").build();;
+    private BarSeries monthlyBarSeries = new BaseBarSeriesBuilder().withName("M1").build();;
 
     private TimeFrame baseTimeFrame;
     private long maximumBars=0;
@@ -64,9 +65,10 @@ public abstract class BarSeriesProvider {
         }
     }
 
-    public void tickForward(){
+    public boolean tickForward(){
         currentBarIndex++;
         updateAllBarSeries();
+        return (currentBarIndex <= maximumBars-1);
     }
 
 
@@ -134,8 +136,10 @@ public abstract class BarSeriesProvider {
         BarSeries baseBarSeries = getBarSeries(baseTimeFrame);
         Bar bar = baseBarSeries.getBar(currentBarIndex);
         Bar previousBar = baseBarSeries.getBar(currentBarIndex-1);
+
         ZonedDateTime openTime = bar.getBeginTime();
         ZonedDateTime closeTime = bar.getEndTime();
+
         ZonedDateTime previousOpenTime = previousBar.getBeginTime();
         ZonedDateTime previousCloseTime = previousBar.getEndTime();
 
