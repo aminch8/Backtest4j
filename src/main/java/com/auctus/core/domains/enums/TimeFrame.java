@@ -6,6 +6,16 @@ import lombok.Getter;
 @AllArgsConstructor
 @Getter
 public enum TimeFrame {
-    TICK("TICK"),Mo("Mo"),W1("W1"),D1("D1"),H4("H4"),H2("H2"),H1("H1"),M30("M30"),M15("M15"),M5("M5"),M1("M1");
+    Mo("Mo",9),
+    W1("W1",8),
+    D1("D1",7),
+    H4("H4",6),
+    H2("H2",5),
+    H1("H1",4),
+    M30("M30",3),
+    M15("M15",2),
+    M5("M5",1),
+    M1("M1",0);
     private String value;
+    private int index;
 }

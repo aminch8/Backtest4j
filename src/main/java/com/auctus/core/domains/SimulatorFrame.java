@@ -8,7 +8,7 @@ import org.ta4j.core.BarSeriesManager;
 import java.util.List;
 
 @Data
-public class SimulatorFrame {
+public abstract class SimulatorFrame {
     List<Order> orders;
     private String symbol;
     private BarSeriesProvider barSeriesProvider;
