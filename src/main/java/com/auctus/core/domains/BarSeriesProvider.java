@@ -9,6 +9,7 @@ import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.ZonedDateTime;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -61,22 +62,9 @@ public abstract class BarSeriesProvider {
         }
     }
 
-    public void tick(){
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    public void tickForward(){
         currentBarIndex++;
+        updateAllBarSeries();
     }
 
 
@@ -137,13 +125,7 @@ public abstract class BarSeriesProvider {
         }
     }
 
-    private void updateFiveMinuteBarSeries(Bar bar,TimeFrame timeFrame){
-        BarSeries fiveMinuteBarSeries = getBarSeries(timeFrame);
-
-
-    }
-
-    private void updateBarSeriesByTick(TimeFrame timeFrame){
+    private void propagateBarSeriesByTick(TimeFrame timeFrame){
         if (timeFrame.getIndex() <= baseTimeFrame.getIndex()){
             throw new IllegalStateException("Wrong Timeframe given for chosen bar series");
         }
@@ -155,11 +137,10 @@ public abstract class BarSeriesProvider {
         ZonedDateTime previousOpenTime = previousBar.getBeginTime();
         ZonedDateTime previousCloseTime = previousBar.getEndTime();
 
-
       switch (timeFrame){
           case M5:{
               if (
-                      ZdtUtil.zonedDateTimeDifference(previousOpenTime,openTime)>=5
+                      ZdtUtil.zonedDateTimeDifferenceInMinutes(previousOpenTime,openTime)>=5
               )
               {
                   fiveMinuteBarSeries.addBar(
@@ -179,7 +160,7 @@ public abstract class BarSeriesProvider {
               }
           }
           case M15:{
-              if (ZdtUtil.zonedDateTimeDifference(previousOpenTime,openTime)>=15){
+              if (ZdtUtil.zonedDateTimeDifferenceInMinutes(previousOpenTime,openTime)>=15){
                   fifteenMinutesBarSeries.addBar(
                           Duration.ofMinutes(15),
                           closeTime.plusMinutes(15),
@@ -197,7 +178,7 @@ public abstract class BarSeriesProvider {
               }
           }
           case M30:{
-              if (ZdtUtil.zonedDateTimeDifference(previousOpenTime,openTime)>=30){
+              if (ZdtUtil.zonedDateTimeDifferenceInMinutes(previousOpenTime,openTime)>=30){
                   thirtyMinutesBarSeries.addBar(
                           Duration.ofMinutes(30),
                           closeTime.plusMinutes(30),
@@ -215,7 +196,7 @@ public abstract class BarSeriesProvider {
               }
           }
           case H1:{
-              if (ZdtUtil.zonedDateTimeDifference(previousOpenTime,openTime)>=60){
+              if (ZdtUtil.zonedDateTimeDifferenceInMinutes(previousOpenTime,openTime)>=60){
                   oneHourBarSeries.addBar(
                           Duration.ofMinutes(60),
                           closeTime.plusMinutes(60),
@@ -234,7 +215,7 @@ public abstract class BarSeriesProvider {
           }
 
           case H2:{
-              if (ZdtUtil.zonedDateTimeDifference(previousOpenTime,openTime)>=120 ){
+              if (ZdtUtil.zonedDateTimeDifferenceInMinutes(previousOpenTime,openTime)>=120 ){
                   twoHourBarSeries.addBar(
                           Duration.ofHours(2),
                           closeTime.plusHours(2),
@@ -253,7 +234,7 @@ public abstract class BarSeriesProvider {
           }
 
           case H4:{
-              if ( ZdtUtil.zonedDateTimeDifference(previousOpenTime,openTime)>=240 ){
+              if ( ZdtUtil.zonedDateTimeDifferenceInMinutes(previousOpenTime,openTime)>=240 ){
                   fourHourBarSeries.addBar(
                           Duration.ofHours(4),
                           closeTime.plusHours(4),
@@ -330,5 +311,15 @@ public abstract class BarSeriesProvider {
 
       }
 
+    }
+
+    private void updateAllBarSeries(){
+        int indexOfTimeFrame = this.baseTimeFrame.getIndex();
+        List<TimeFrame> timeFrames = Arrays.stream(TimeFrame.values()).collect(Collectors.toList());
+        timeFrames.sort(Comparator.reverseOrder());
+        for (int i=indexOfTimeFrame;i<TimeFrame.values().length;i++){
+            TimeFrame selectedTimeFrame = timeFrames.get(i);
+            propagateBarSeriesByTick(selectedTimeFrame);
+        }
     }
 }

@@ -1,15 +1,27 @@
 package com.auctus.core;
 
+import com.auctus.core.domains.enums.TimeFrame;
 import com.auctus.core.utils.ZdtUtil;
 
 import java.time.ZonedDateTime;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
+import java.util.stream.Collectors;
 
 public class Main {
 
     public static void main(String[] args) {
 
+        List<TimeFrame> timeFrames = Arrays.stream(TimeFrame.values()).collect(Collectors.toList());
+        timeFrames.sort(Comparator.reverseOrder());
+//        for (int i=indexOfTimeFrame;i<TimeFrame.values().length;i++){
+//
+//        }
 
-        System.out.println(ZdtUtil.zonedDateTimeDifference(ZonedDateTime.now(),ZonedDateTime.now().plusMinutes(100)));
+        for (TimeFrame timeFrame : timeFrames) {
+            System.out.println(timeFrame.getIndex() + timeFrame.getValue());
+        }
     }
 
 }
