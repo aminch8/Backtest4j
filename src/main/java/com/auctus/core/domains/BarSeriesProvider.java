@@ -1,9 +1,11 @@
 package com.auctus.core.domains;
 
 import com.auctus.core.domains.enums.TimeFrame;
+import com.auctus.core.utils.NumUtil;
 import com.auctus.core.utils.ZdtUtil;
 import org.ta4j.core.Bar;
 import org.ta4j.core.BarSeries;
+import org.ta4j.core.num.Num;
 
 import java.time.DayOfWeek;
 import java.time.Duration;
@@ -322,4 +324,30 @@ public abstract class BarSeriesProvider {
             propagateBarSeriesByTick(selectedTimeFrame);
         }
     }
+
+    public Num getHighYesterday(){
+        BarSeries barSeries = getBarSeries(TimeFrame.D1);
+        if (barSeries.getBarCount()<2) return NumUtil.getNum(0);
+        return barSeries.getBar(barSeries.getBarCount()-2).getHighPrice();
+    }
+
+    public Num getLowYesterday(){
+        BarSeries barSeries = getBarSeries(TimeFrame.D1);
+        if (barSeries.getBarCount()<2) return NumUtil.getNum(0);
+        return barSeries.getBar(barSeries.getBarCount()-2).getLowPrice();
+    }
+
+    public Num getHighLastWeek(){
+        BarSeries barSeries = getBarSeries(TimeFrame.W1);
+        if (barSeries.getBarCount()<2) return NumUtil.getNum(0);
+        return barSeries.getBar(barSeries.getBarCount()-2).getHighPrice();
+    }
+
+    public Num getLowLastWeek(){
+        BarSeries barSeries = getBarSeries(TimeFrame.W1);
+        if (barSeries.getBarCount()<2) return NumUtil.getNum(0);
+        return barSeries.getBar(barSeries.getBarCount()-2).getLowPrice();
+    }
+
+
 }
