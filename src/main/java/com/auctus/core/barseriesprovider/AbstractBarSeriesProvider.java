@@ -1,8 +1,8 @@
-package com.auctus.core.domains;
+package com.auctus.core.barseriesprovider;
 
 import com.auctus.core.domains.enums.TimeFrame;
 import com.auctus.core.utils.NumUtil;
-import com.auctus.core.utils.ZdtUtil;
+import com.auctus.core.utils.ZDTUtil;
 import org.ta4j.core.Bar;
 import org.ta4j.core.BarSeries;
 import org.ta4j.core.BaseBarSeriesBuilder;
@@ -16,18 +16,20 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public abstract class BarSeriesProvider {
+public abstract class AbstractBarSeriesProvider {
+
+    private BarSeries completeBaseBarSeriesHolder;
 
     private BarSeries oneMinuteBarSeries = new BaseBarSeriesBuilder().withName("M1").build();
     private BarSeries fiveMinuteBarSeries = new BaseBarSeriesBuilder().withName("M5").build();
-    private BarSeries fifteenMinutesBarSeries = new BaseBarSeriesBuilder().withName("M15").build();;
-    private BarSeries thirtyMinutesBarSeries = new BaseBarSeriesBuilder().withName("M30").build();;
-    private BarSeries oneHourBarSeries = new BaseBarSeriesBuilder().withName("H1").build();;
-    private BarSeries twoHourBarSeries = new BaseBarSeriesBuilder().withName("H2").build();;
-    private BarSeries fourHourBarSeries = new BaseBarSeriesBuilder().withName("H4").build();;
-    private BarSeries dailyBarSeries = new BaseBarSeriesBuilder().withName("D1").build();;
-    private BarSeries weeklyBarSeries = new BaseBarSeriesBuilder().withName("W1").build();;
-    private BarSeries monthlyBarSeries = new BaseBarSeriesBuilder().withName("M1").build();;
+    private BarSeries fifteenMinutesBarSeries = new BaseBarSeriesBuilder().withName("M15").build();
+    private BarSeries thirtyMinutesBarSeries = new BaseBarSeriesBuilder().withName("M30").build();
+    private BarSeries oneHourBarSeries = new BaseBarSeriesBuilder().withName("H1").build();
+    private BarSeries twoHourBarSeries = new BaseBarSeriesBuilder().withName("H2").build();
+    private BarSeries fourHourBarSeries = new BaseBarSeriesBuilder().withName("H4").build();
+    private BarSeries dailyBarSeries = new BaseBarSeriesBuilder().withName("D1").build();
+    private BarSeries weeklyBarSeries = new BaseBarSeriesBuilder().withName("W1").build();
+    private BarSeries monthlyBarSeries = new BaseBarSeriesBuilder().withName("M1").build();
 
     private TimeFrame baseTimeFrame;
     private long maximumBars=0;
@@ -35,45 +37,21 @@ public abstract class BarSeriesProvider {
 
     private List<TimeFrame> allowedTimeFrames = Arrays.stream(TimeFrame.values()).collect(Collectors.toList());
 
-    public BarSeriesProvider(BarSeries barSeries, TimeFrame timeFrame) {
+    public AbstractBarSeriesProvider(BarSeries barSeries, TimeFrame timeFrame) {
         this.baseTimeFrame = timeFrame;
         this.maximumBars = barSeries.getMaximumBarCount();
         allowedTimeFrames = allowedTimeFrames.subList(timeFrame.getIndex(),allowedTimeFrames.size());
-        switch (timeFrame){
-            case M1:
-                this.oneMinuteBarSeries = barSeries;
-            case M5:
-                this.fiveMinuteBarSeries = barSeries;
-            case M15:
-                this.fifteenMinutesBarSeries = barSeries;
-            case M30:
-                this.thirtyMinutesBarSeries = barSeries;
-            case H1:
-                this.oneHourBarSeries = barSeries;
-            case H2:
-                this.twoHourBarSeries = barSeries;
-            case H4:
-                this.fourHourBarSeries = barSeries;
-            case D1:
-                this.dailyBarSeries = barSeries;
-            case W1:
-                this.weeklyBarSeries = barSeries;
-            case Mo:
-                this.monthlyBarSeries = barSeries;
-            default:
-                throw new IllegalStateException("Wrong Timeframe given for chosen bar series");
-        }
+        completeBaseBarSeriesHolder = barSeries;
     }
 
     public boolean tickForward(){
-        currentBarIndex++;
         updateAllBarSeries();
         return (currentBarIndex <= maximumBars-1);
     }
 
 
     public BarSeries getBarSeries(TimeFrame timeFrame){
-        if (timeFrame.getIndex()<this.baseTimeFrame.getIndex()){
+        if (timeFrame.getIndex()<=this.baseTimeFrame.getIndex()){
             throw new IllegalStateException("Accessing lower time frame than the main bar series is not possible");
         }
         switch (timeFrame){
@@ -146,7 +124,7 @@ public abstract class BarSeriesProvider {
       switch (timeFrame){
           case M5:{
               if (
-                      ZdtUtil.zonedDateTimeDifferenceInMinutes(previousOpenTime,openTime)>=5
+                      ZDTUtil.zonedDateTimeDifferenceInMinutes(previousOpenTime,openTime)>=5
               )
               {
                   fiveMinuteBarSeries.addBar(
@@ -166,7 +144,7 @@ public abstract class BarSeriesProvider {
               }
           }
           case M15:{
-              if (ZdtUtil.zonedDateTimeDifferenceInMinutes(previousOpenTime,openTime)>=15){
+              if (ZDTUtil.zonedDateTimeDifferenceInMinutes(previousOpenTime,openTime)>=15){
                   fifteenMinutesBarSeries.addBar(
                           Duration.ofMinutes(15),
                           closeTime.plusMinutes(15),
@@ -184,7 +162,7 @@ public abstract class BarSeriesProvider {
               }
           }
           case M30:{
-              if (ZdtUtil.zonedDateTimeDifferenceInMinutes(previousOpenTime,openTime)>=30){
+              if (ZDTUtil.zonedDateTimeDifferenceInMinutes(previousOpenTime,openTime)>=30){
                   thirtyMinutesBarSeries.addBar(
                           Duration.ofMinutes(30),
                           closeTime.plusMinutes(30),
@@ -202,7 +180,7 @@ public abstract class BarSeriesProvider {
               }
           }
           case H1:{
-              if (ZdtUtil.zonedDateTimeDifferenceInMinutes(previousOpenTime,openTime)>=60){
+              if (ZDTUtil.zonedDateTimeDifferenceInMinutes(previousOpenTime,openTime)>=60){
                   oneHourBarSeries.addBar(
                           Duration.ofMinutes(60),
                           closeTime.plusMinutes(60),
@@ -221,7 +199,7 @@ public abstract class BarSeriesProvider {
           }
 
           case H2:{
-              if (ZdtUtil.zonedDateTimeDifferenceInMinutes(previousOpenTime,openTime)>=120 ){
+              if (ZDTUtil.zonedDateTimeDifferenceInMinutes(previousOpenTime,openTime)>=120 ){
                   twoHourBarSeries.addBar(
                           Duration.ofHours(2),
                           closeTime.plusHours(2),
@@ -240,7 +218,7 @@ public abstract class BarSeriesProvider {
           }
 
           case H4:{
-              if ( ZdtUtil.zonedDateTimeDifferenceInMinutes(previousOpenTime,openTime)>=240 ){
+              if ( ZDTUtil.zonedDateTimeDifferenceInMinutes(previousOpenTime,openTime)>=240 ){
                   fourHourBarSeries.addBar(
                           Duration.ofHours(4),
                           closeTime.plusHours(4),
@@ -320,13 +298,20 @@ public abstract class BarSeriesProvider {
     }
 
     private void updateAllBarSeries(){
+        updateBaseBarSeries();
         int indexOfTimeFrame = this.baseTimeFrame.getIndex();
         List<TimeFrame> timeFrames = Arrays.stream(TimeFrame.values()).collect(Collectors.toList());
         timeFrames.sort(Comparator.reverseOrder());
-        for (int i=indexOfTimeFrame;i<TimeFrame.values().length;i++){
+        for (int i=indexOfTimeFrame+1;i<TimeFrame.values().length;i++){
             TimeFrame selectedTimeFrame = timeFrames.get(i);
             propagateBarSeriesByTick(selectedTimeFrame);
         }
+    }
+
+    private void updateBaseBarSeries(){
+        BarSeries barSeries = getBarSeries(this.baseTimeFrame);
+        barSeries.addBar(completeBaseBarSeriesHolder.getBar(currentBarIndex));
+        currentBarIndex++;
     }
 
     public Num getHighYesterday(){
@@ -353,5 +338,11 @@ public abstract class BarSeriesProvider {
         return barSeries.getBar(barSeries.getBarCount()-2).getLowPrice();
     }
 
+    public TimeFrame getBaseTimeFrame() {
+        return baseTimeFrame;
+    }
 
+    public BarSeries getBaseBarSeries(){
+        return getBarSeries(this.baseTimeFrame);
+    }
 }

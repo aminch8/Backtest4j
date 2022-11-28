@@ -1,9 +1,7 @@
 package com.auctus.core;
 
 import com.auctus.core.domains.enums.TimeFrame;
-import com.auctus.core.utils.ZdtUtil;
 
-import java.time.ZonedDateTime;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;

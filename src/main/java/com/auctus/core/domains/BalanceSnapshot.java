@@ -2,12 +2,13 @@ package com.auctus.core.domains;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.ta4j.core.num.Num;
 
 import java.time.ZonedDateTime;
 
-@Data
+@Getter
 @NoArgsConstructor
 @AllArgsConstructor
 public class BalanceSnapshot {

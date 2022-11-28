@@ -1,17 +1,14 @@
 package com.auctus.core.domains;
 
 import com.auctus.core.domains.enums.TradeSide;
-import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 import org.ta4j.core.num.Num;
 
 import java.time.ZonedDateTime;
 
 @Data
-@AllArgsConstructor
-@NoArgsConstructor
-public abstract class Trade {
+public class TradeLog {
+
     private String symbol;
     private Num entryPrice;
     private Num stopLoss;
@@ -30,4 +27,6 @@ public abstract class Trade {
         }
         return profitInPoints.multipliedBy(volume);
     }
+
+
 }
