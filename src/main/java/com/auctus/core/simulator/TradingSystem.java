@@ -7,7 +7,7 @@ import com.auctus.core.domains.Position;
 public class TradingSystem extends AbstractTradingSystem {
 
     public TradingSystem(String symbol, BarSeriesProvider barSeriesProvider) {
-        super(symbol, barSeriesProvider);
+        super(barSeriesProvider,symbol);
     }
 
     @Override

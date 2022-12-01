@@ -3,6 +3,7 @@ package com.auctus.core.barseriesprovider;
 import com.auctus.core.domains.enums.TimeFrame;
 import com.auctus.core.utils.NumUtil;
 import com.auctus.core.utils.ZDTUtil;
+import lombok.Getter;
 import org.ta4j.core.Bar;
 import org.ta4j.core.BarSeries;
 import org.ta4j.core.BaseBarSeriesBuilder;
@@ -34,14 +35,17 @@ public abstract class AbstractBarSeriesProvider {
     private TimeFrame baseTimeFrame;
     private long maximumBars=0;
     private int currentBarIndex = 1;
+    @Getter
+    private String symbol;
 
     private List<TimeFrame> allowedTimeFrames = Arrays.stream(TimeFrame.values()).collect(Collectors.toList());
 
-    public AbstractBarSeriesProvider(BarSeries barSeries, TimeFrame timeFrame) {
+    public AbstractBarSeriesProvider(BarSeries barSeries, TimeFrame timeFrame,String symbol) {
         this.baseTimeFrame = timeFrame;
         this.maximumBars = barSeries.getMaximumBarCount();
         allowedTimeFrames = allowedTimeFrames.subList(timeFrame.getIndex(),allowedTimeFrames.size());
         completeBaseBarSeriesHolder = barSeries;
+        this.symbol=symbol;
     }
 
     public boolean tickForward(){

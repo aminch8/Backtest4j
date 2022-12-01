@@ -15,4 +15,10 @@ public class Position {
     private Num averageEntryPrice=NumUtil.getNum(0);
     private Num stopLoss=NumUtil.getNum(0);
     private Num takeProfit=NumUtil.getNum(0);
+
+    public boolean isNotEmpty(){
+        return !size.isZero();
+    }
+    public boolean isShort(){ return size.isNegative();}
+    public boolean isLong(){ return size.isPositive();}
 }

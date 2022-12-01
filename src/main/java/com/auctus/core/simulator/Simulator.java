@@ -33,14 +33,23 @@ public class Simulator<T extends AbstractTradingSystem> {
         Bar lastBar = barSeries.getLastBar();
 
         Position runningPosition = tradingSystem.getRunningPosition();
+       if (runningPosition.isLong()){
+           Order exitBuy = tradingSystem.onExitBuyCondition();
+           if (exitBuy.isReduceOnly() && !exitBuy.getVolume().isZero()) tradingSystem.addOrder(exitBuy);
+       }
+
+       if (runningPosition.isShort()){
+           Order exitSell = tradingSystem.onExitSellCondition();
+           if (exitSell.isReduceOnly() && !exitSell.getVolume().isZero()) tradingSystem.addOrder(exitSell);
+       }
+
         processTick(lastBar,runningPosition);
         List<Order> activeOrders = tradingSystem.getActiveOrders();
 
-
         Order buyOrder = tradingSystem.onBuyCondition();
-        Order exitBuyOrder = tradingSystem.onExitBuyCondition();
+
         Order sellOrder = tradingSystem.onSellCondition();
-        Order exitSellOrder = tradingSystem.onExitSellCondition();
+
 
     }
 
@@ -62,10 +71,30 @@ public class Simulator<T extends AbstractTradingSystem> {
         Num stoploss = position.getStopLoss();
 
         if (positionSize.isPositive()){
+            if (bar.getLowPrice().isLessThan(stoploss)){
+                //stoploss hit
+            }
+
+            if (bar.getHighPrice().isGreaterThan(takeProfit)){
+                //take profit
+            }
+
 
         }else {
 
+            if (bar.getLowPrice().isLessThan(takeProfit)){
+                //stoploss hit
+            }
+
+            if (bar.getHighPrice().isGreaterThan(stoploss)){
+                //take profit
+            }
+
         }
+
+    }
+
+    private void analyzeExitOrders(){
 
     }
 
