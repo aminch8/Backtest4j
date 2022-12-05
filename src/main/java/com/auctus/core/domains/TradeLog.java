@@ -1,6 +1,7 @@
 package com.auctus.core.domains;
 
 import com.auctus.core.domains.enums.TradeSide;
+import com.auctus.core.utils.NumUtil;
 import lombok.Data;
 import org.ta4j.core.num.Num;
 
@@ -10,23 +11,30 @@ import java.time.ZonedDateTime;
 public class TradeLog {
 
     private String symbol;
-    private Num entryPrice;
-    private Num stopLoss;
-    private Num takeProfit;
-    private Num exitedPrice;
     private TradeSide tradeSide;
     private Num volume;
-    private ZonedDateTime enteredDate;
-    private ZonedDateTime exitedDate;
-    public Num profitAbs(){
-        Num profitInPoints;
-        if (tradeSide==TradeSide.BUY){
-            profitInPoints = exitedPrice.minus(entryPrice);
+    private Num price;
+    private ZonedDateTime date;
+
+
+    public static TradeLog createLog(String symbol,Num executedVolume,Num price,ZonedDateTime time){
+        TradeLog tradeLog = new TradeLog();
+        if (executedVolume.isZero()) throw new IllegalStateException("Executed volume zero");
+        tradeLog.setSymbol(symbol);
+        tradeLog.setDate(time);
+        tradeLog.setPrice(price);
+        tradeLog.setVolume(executedVolume);
+        if (executedVolume.isPositive()){
+            tradeLog.setTradeSide(TradeSide.BUY);
+            return tradeLog;
         }else {
-            profitInPoints=entryPrice.minus(exitedPrice);
+            tradeLog.setTradeSide(TradeSide.SELL);
+            return tradeLog;
         }
-        return profitInPoints.multipliedBy(volume);
     }
 
+    private TradeLog(){
+
+    }
 
 }

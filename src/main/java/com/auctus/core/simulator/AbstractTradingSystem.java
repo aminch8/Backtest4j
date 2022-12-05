@@ -7,6 +7,7 @@ import com.auctus.core.domains.Position;
 import com.auctus.core.utils.NumUtil;
 import lombok.AccessLevel;
 import lombok.Getter;
+import lombok.Setter;
 import org.ta4j.core.num.Num;
 
 import java.util.ArrayList;
@@ -15,10 +16,10 @@ import java.util.List;
 public abstract class AbstractTradingSystem<T extends AbstractBarSeriesProvider> {
 
 
-    private List<Order> orders=new ArrayList<>();
+    private List<Order> orders=new ArrayList<Order>();
     private Position position=new Position();
     @Getter
-    private Num balance= NumUtil.getNum(this.startingBalance());
+    private Num balance= NumUtil.getNum(this.startingBalance())!=null?NumUtil.getNum(this.startingBalance()):NumUtil.getNum(1000);
 
     public abstract Order onBuyCondition();
     public abstract Order onSellCondition();
@@ -47,5 +48,13 @@ public abstract class AbstractTradingSystem<T extends AbstractBarSeriesProvider>
 
     public void addOrder(Order order){
         this.orders.add(order);
+    }
+
+    public void clearAllOrders(){
+        this.orders=new ArrayList<Order>();
+    }
+
+    public void updatePosition(Position position){
+        this.position = position;
     }
 }

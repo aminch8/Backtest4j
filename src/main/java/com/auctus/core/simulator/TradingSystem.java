@@ -1,13 +1,15 @@
 package com.auctus.core.simulator;
 
+import com.auctus.core.barseriesprovider.AbstractBarSeriesProvider;
 import com.auctus.core.barseriesprovider.BarSeriesProvider;
 import com.auctus.core.domains.Order;
 import com.auctus.core.domains.Position;
 
 public class TradingSystem extends AbstractTradingSystem {
 
-    public TradingSystem(String symbol, BarSeriesProvider barSeriesProvider) {
-        super(barSeriesProvider,symbol);
+
+    public TradingSystem(AbstractBarSeriesProvider barSeriesProvider) {
+        super(barSeriesProvider);
     }
 
     @Override
@@ -29,6 +31,12 @@ public class TradingSystem extends AbstractTradingSystem {
     public Order onExitSellCondition() {
         return null;
     }
+
+    @Override
+    public Number startingBalance() {
+        return null;
+    }
+
 
 
 }
