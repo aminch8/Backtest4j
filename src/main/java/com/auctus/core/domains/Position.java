@@ -19,4 +19,7 @@ public class Position {
     }
     public boolean isShort(){ return size.isNegative();}
     public boolean isLong(){ return size.isPositive();}
+    public Num getUnrealizedProfitAndLoss(Num currentPrice){
+        return currentPrice.minus(averageEntryPrice).multipliedBy(size);
+    }
 }

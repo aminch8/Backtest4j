@@ -57,4 +57,19 @@ public abstract class AbstractTradingSystem<T extends AbstractBarSeriesProvider>
     public void updatePosition(Position position){
         this.position = position;
     }
+
+    public void addBalance(Num realizedProfitAndLoss){
+        this.balance=this.balance.plus(realizedProfitAndLoss);
+    }
+    public void reduceBalance(Num reductionAmount){
+        this.balance=this.balance.minus(reductionAmount);
+    }
+    public void reduceBalancePercent(Num reductionInPercent){
+        this.balance=this.balance.multipliedBy(
+                NumUtil.getNum(1)
+                .minus(
+                    reductionInPercent.dividedBy(NumUtil.getNum(100))
+                )
+        );
+    }
 }
