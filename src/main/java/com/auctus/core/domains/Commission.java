@@ -24,7 +24,7 @@ public class Commission extends Costs {
         switch (this.costType) {
             case PERCENT:
                     return price.multipliedBy(
-                            this.value.dividedBy(NumUtil.getNum(100))
+                            this.value
                     ).multipliedBy(
                             order.getVolume().abs()
                     );

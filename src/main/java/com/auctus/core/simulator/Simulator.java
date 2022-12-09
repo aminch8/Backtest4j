@@ -71,6 +71,19 @@ public class Simulator<T extends AbstractTradingSystem> {
         else analyzeOrder(sellOrder);
 
        this.createSnapShotOfBalance();
+       this.fundingRateFees();
+    }
+
+    private void fundingRateFees() {
+        BarSeries baseBarSeries = tradingSystem.getBarSeriesProvider().getBaseBarSeries();
+        if (baseBarSeries.getBarCount()<2) return;
+        Bar lastBar = baseBarSeries.getLastBar();
+        Bar previousBar = baseBarSeries.getBar(baseBarSeries.getBarCount()-2);
+        ZonedDateTime lastBarEndTime = lastBar.getEndTime();
+        ZonedDateTime previousBarEndTime = previousBar.getEndTime();
+
+        lastBarEndTime.withHour(0).withMinute(0).withSecond(0).withNano(0);
+
     }
 
     private void createSnapShotOfBalance() {

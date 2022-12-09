@@ -3,6 +3,7 @@ package com.auctus.core.domains;
 import com.auctus.core.domains.enums.CostType;
 import com.auctus.core.domains.enums.PeriodicCostInterval;
 import com.auctus.core.utils.NumUtil;
+import org.ta4j.core.num.Num;
 
 public class FundingRate extends PeriodicCosts{
 
@@ -24,5 +25,15 @@ public class FundingRate extends PeriodicCosts{
     }
 
     private FundingRate() {
+    }
+
+    public Num getFundingRateValue(Position position,Num currentPrice){
+        switch (this.costType){
+            case ABSOLUTE:
+                return position.getSize().multipliedBy(this.value);
+            case PERCENT:
+                return position.getSize().multipliedBy(this.value.multipliedBy(currentPrice));
+        }
+        return NumUtil.getNum(0);
     }
 }
