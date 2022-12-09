@@ -19,7 +19,7 @@ public abstract class AbstractTradingSystem<T extends AbstractBarSeriesProvider>
     private List<Order> orders=new ArrayList<Order>();
     private Position position=new Position();
     @Getter
-    private Num balance= NumUtil.getNum(this.startingBalance())!=null?NumUtil.getNum(this.startingBalance()):NumUtil.getNum(1000);
+    private Num balance= NumUtil.getNum(this.startingBalance());
 
     public abstract Order onBuyCondition();
     public abstract Order onSellCondition();

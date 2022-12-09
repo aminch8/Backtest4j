@@ -25,16 +25,21 @@ public class Simulator<T extends AbstractTradingSystem> {
     private Commission commission = Commission.ofPercentPrice(0);
     private FundingRate fundingRate = FundingRate.ofPercentPrice(0, PeriodicCostInterval.EIGHT_HOURS);
     private List<TradeLog> tradeHistory = new ArrayList<>();
+    private List<BalanceSnapshot> balanceSnapshots = new ArrayList<>();
 
     public Simulator(T tradingSystem) {
         this.tradingSystem = tradingSystem;
     }
 
     public void startSimulation(){
-        tradingSystem.getBarSeriesProvider().tickForward();
-        this.simulateTick();
+        while (tradingSystem.getBarSeriesProvider().tickForward()){
+            this.simulateTick();
+        }
+        log.info("Simulation Ended : " + this.tradingSystem.getSymbol());
+        log.info("Total Bars Simulated : " + this.tradingSystem.getBarSeriesProvider().getBaseBarSeries().getBarCount());
+        log.info("Ending Balance : " + this.tradingSystem.getBalance());
+        log.info("Starting Balance : " + this.tradingSystem.startingBalance());
     }
-
 
     private void simulateTick() {
         processTick();
@@ -65,7 +70,17 @@ public class Simulator<T extends AbstractTradingSystem> {
             tradingSystem.addOrder(sellOrder);
         else analyzeOrder(sellOrder);
 
+       this.createSnapShotOfBalance();
+    }
 
+    private void createSnapShotOfBalance() {
+        Bar currentBar = tradingSystem.getBarSeriesProvider().getBaseBarSeries().getLastBar();
+        Position runningPosition = tradingSystem.getRunningPosition();
+        BalanceSnapshot balanceSnapshot =
+                BalanceSnapshot.createSnapshot(currentBar.getEndTime(),
+                        runningPosition.getUnrealizedProfitAndLoss(currentBar.getClosePrice()).plus(tradingSystem.getBalance()),
+                        tradingSystem.getBalance());
+        balanceSnapshots.add(balanceSnapshot);
     }
 
 
@@ -99,6 +114,8 @@ public class Simulator<T extends AbstractTradingSystem> {
         Position position = tradingSystem.getRunningPosition();
         if (order.getOrderType() == OrderType.MARKET) {
             executedPrice = lastCandle.getClosePrice();
+            executedPrice = slippage.getSlippedPrice(executedPrice,order);
+            tradingSystem.reduceBalance(commission.getCostOfCommission(lastCandle.getClosePrice(), order));
         }
 
         if (order.getOrderType() == OrderType.LIMIT) {
@@ -108,7 +125,9 @@ public class Simulator<T extends AbstractTradingSystem> {
             } else {
                 if (lastCandle.getHighPrice().isLessThan(orderPrice)) return;
             }
+            tradingSystem.reduceBalance(commission.getCostOfCommission(orderPrice, order));
         }
+
 
         TradeLog tradeLog = TradeLog.createLog(tradingSystem.getSymbol(), orderVolume, executedPrice, lastCandle.getEndTime());
         tradeHistory.add(tradeLog);
@@ -133,6 +152,7 @@ public class Simulator<T extends AbstractTradingSystem> {
                     if (lastCandle.getLowPrice().isGreaterThan(orderPrice)) return;
                     if (position.getSize().isNegative()) {
                         newNetSize = position.getSize().plus(orderVolume).min(NumUtil.getNum(0));
+                        tradingSystem.reduceBalance(commission.getCostOfCommission(orderPrice, order));
                     } else {
                         log.error("Something has gone wrong... Reduce only order on wrong side of the position?");
                     }
@@ -141,6 +161,7 @@ public class Simulator<T extends AbstractTradingSystem> {
                     if (lastCandle.getHighPrice().isLessThan(orderPrice)) return;
                     if (position.getSize().isPositive()) {
                         newNetSize = position.getSize().plus(orderVolume).max(NumUtil.getNum(0));
+                        tradingSystem.reduceBalance(commission.getCostOfCommission(orderPrice, order));
                     } else {
                         log.error("Something has gone wrong... Reduce only order on wrong side of the position?");
                     }
@@ -148,10 +169,12 @@ public class Simulator<T extends AbstractTradingSystem> {
                 break;
             case MARKET:
                 executedPrice = lastCandle.getClosePrice();
+                executedPrice = slippage.getSlippedPrice(executedPrice,order);
                 if (orderVolume.isPositive()) {
                     //closing short position
                     if (position.getSize().isNegative()) {
                         newNetSize = position.getSize().plus(orderVolume).min(NumUtil.getNum(0));
+                        tradingSystem.reduceBalance(commission.getCostOfCommission(lastCandle.getClosePrice(), order));
                     } else {
                         log.error("Something has gone wrong... Reduce only order on wrong side of the position?");
                     }
@@ -159,6 +182,7 @@ public class Simulator<T extends AbstractTradingSystem> {
                     //closing long position
                     if (position.getSize().isPositive()) {
                         newNetSize = position.getSize().plus(orderVolume).max(NumUtil.getNum(0));
+                        tradingSystem.reduceBalance(commission.getCostOfCommission(lastCandle.getClosePrice(), order));
                     } else {
                         log.error("Something has gone wrong... Reduce only order on wrong side of the position?");
                     }
