@@ -2,8 +2,7 @@ package com.auctus.core.simulator;
 
 import com.auctus.core.barseriesprovider.AbstractBarSeriesProvider;
 import com.auctus.core.barseriesprovider.BarSeriesProvider;
-import com.auctus.core.domains.Order;
-import com.auctus.core.domains.Position;
+import com.auctus.core.domains.*;
 import com.auctus.core.utils.NumUtil;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -26,6 +25,9 @@ public abstract class AbstractTradingSystem<T extends AbstractBarSeriesProvider>
     public abstract Order onExitBuyCondition();
     public abstract Order onExitSellCondition();
     public abstract Number startingBalance();
+    public abstract FundingRate getFundingRate();
+    public abstract Commission getCommission();
+    public abstract Slippage getSlippage();
 
     @Getter
     private final T barSeriesProvider;
@@ -72,4 +74,6 @@ public abstract class AbstractTradingSystem<T extends AbstractBarSeriesProvider>
                 )
         );
     }
+
+
 }

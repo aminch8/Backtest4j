@@ -21,9 +21,9 @@ import java.util.List;
 public class Simulator<T extends AbstractTradingSystem> {
 
     private T tradingSystem;
-    private Slippage slippage = Slippage.ofPercentPrice(0);
-    private Commission commission = Commission.ofPercentPrice(0);
-    private FundingRate fundingRate = FundingRate.ofPercentPrice(0, PeriodicCostInterval.EIGHT_HOURS);
+    private Slippage slippage = tradingSystem.getSlippage()==null?Slippage.ofPercentPrice(0):tradingSystem.getSlippage();
+    private Commission commission = tradingSystem.getCommission()==null?Commission.ofPercentPrice(0):tradingSystem.getCommission();
+    private FundingRate fundingRate = tradingSystem.getFundingRate()==null?FundingRate.ofPercentPrice(0, PeriodicCostInterval.EIGHT_HOURS):tradingSystem.getFundingRate();
     private List<TradeLog> tradeHistory = new ArrayList<>();
     private List<BalanceSnapshot> balanceSnapshots = new ArrayList<>();
 
@@ -77,7 +77,6 @@ public class Simulator<T extends AbstractTradingSystem> {
     private void fundingRateFees() {
         BarSeries baseBarSeries = tradingSystem.getBarSeriesProvider().getBaseBarSeries();
         Bar lastBar = baseBarSeries.getLastBar();
-        Bar previousBar = baseBarSeries.getBar(baseBarSeries.getBarCount()-2);
         ZonedDateTime openTime = lastBar.getBeginTime();
         ZonedDateTime closeTime = lastBar.getEndTime();
         ZonedDateTime startOfDayOnOpen = openTime.withHour(0).withHour(0).withSecond(0).withNano(0);
@@ -107,8 +106,9 @@ public class Simulator<T extends AbstractTradingSystem> {
                     }
                 }
         }
-
-
+        Position runningPosition = tradingSystem.getRunningPosition();
+        Num fundingFee = fundingRate.getFundingRateValue(runningPosition,lastBar.getClosePrice()).multipliedBy(NumUtil.getNum(fundingRatesHappened));
+        tradingSystem.reduceBalance(fundingFee);
     }
 
     private void createSnapShotOfBalance() {
