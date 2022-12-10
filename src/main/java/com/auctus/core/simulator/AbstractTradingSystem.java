@@ -12,7 +12,7 @@ import org.ta4j.core.num.Num;
 import java.util.ArrayList;
 import java.util.List;
 
-public abstract class AbstractTradingSystem<T extends AbstractBarSeriesProvider> {
+public abstract class AbstractTradingSystem {
 
 
     private List<Order> orders=new ArrayList<Order>();
@@ -30,9 +30,9 @@ public abstract class AbstractTradingSystem<T extends AbstractBarSeriesProvider>
     public abstract Slippage getSlippage();
 
     @Getter
-    private final T barSeriesProvider;
+    private final AbstractBarSeriesProvider barSeriesProvider;
 
-    public AbstractTradingSystem(T barSeriesProvider) {
+    public AbstractTradingSystem(AbstractBarSeriesProvider barSeriesProvider) {
         this.barSeriesProvider = barSeriesProvider;
     }
 

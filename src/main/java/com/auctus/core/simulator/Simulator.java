@@ -5,6 +5,7 @@ import com.auctus.core.barseriesprovider.BarSeriesProvider;
 import com.auctus.core.domains.*;
 import com.auctus.core.domains.enums.OrderType;
 import com.auctus.core.domains.enums.PeriodicCostInterval;
+import com.auctus.core.exceptions.SimulatorException;
 import com.auctus.core.utils.NumUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.ta4j.core.Bar;
@@ -12,23 +13,28 @@ import org.ta4j.core.BarSeries;
 import org.ta4j.core.Trade;
 import org.ta4j.core.num.Num;
 
+import java.lang.reflect.InvocationTargetException;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
 @Slf4j
-public class Simulator<T extends AbstractTradingSystem> {
+public class Simulator {
 
-    private T tradingSystem;
+    private AbstractTradingSystem tradingSystem;
     private Slippage slippage = tradingSystem.getSlippage()==null?Slippage.ofPercentPrice(0):tradingSystem.getSlippage();
     private Commission commission = tradingSystem.getCommission()==null?Commission.ofPercentPrice(0):tradingSystem.getCommission();
     private FundingRate fundingRate = tradingSystem.getFundingRate()==null?FundingRate.ofPercentPrice(0, PeriodicCostInterval.EIGHT_HOURS):tradingSystem.getFundingRate();
     private List<TradeLog> tradeHistory = new ArrayList<>();
     private List<BalanceSnapshot> balanceSnapshots = new ArrayList<>();
 
-    public Simulator(T tradingSystem) {
-        this.tradingSystem = tradingSystem;
+    public Simulator(Class<? extends AbstractTradingSystem> tradingSystem) {
+        try{
+            this.tradingSystem = tradingSystem.getConstructor().newInstance();
+        }catch (Exception e){
+            throw new SimulatorException("Cannot create instance of class " + tradingSystem.getName());
+        }
     }
 
     public void startSimulation(){
