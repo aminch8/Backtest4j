@@ -1,7 +1,5 @@
 package com.auctus.core.simulator;
 
-import com.auctus.core.barseriesprovider.AbstractBarSeriesProvider;
-import com.auctus.core.barseriesprovider.BarSeriesProvider;
 import com.auctus.core.domains.*;
 import com.auctus.core.domains.enums.OrderType;
 import com.auctus.core.domains.enums.PeriodicCostInterval;
@@ -10,13 +8,10 @@ import com.auctus.core.utils.NumUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.ta4j.core.Bar;
 import org.ta4j.core.BarSeries;
-import org.ta4j.core.Trade;
 import org.ta4j.core.num.Num;
 
-import java.lang.reflect.InvocationTargetException;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 
 @Slf4j

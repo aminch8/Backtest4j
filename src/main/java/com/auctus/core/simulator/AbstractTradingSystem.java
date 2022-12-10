@@ -1,12 +1,9 @@
 package com.auctus.core.simulator;
 
-import com.auctus.core.barseriesprovider.AbstractBarSeriesProvider;
-import com.auctus.core.barseriesprovider.BarSeriesProvider;
+import com.auctus.core.barseriesprovider.BaseBarSeriesProvider;
 import com.auctus.core.domains.*;
 import com.auctus.core.utils.NumUtil;
-import lombok.AccessLevel;
 import lombok.Getter;
-import lombok.Setter;
 import org.ta4j.core.num.Num;
 
 import java.util.ArrayList;
@@ -30,9 +27,9 @@ public abstract class AbstractTradingSystem {
     public abstract Slippage getSlippage();
 
     @Getter
-    private final AbstractBarSeriesProvider barSeriesProvider;
+    private final BaseBarSeriesProvider barSeriesProvider;
 
-    public AbstractTradingSystem(AbstractBarSeriesProvider barSeriesProvider) {
+    public AbstractTradingSystem(BaseBarSeriesProvider barSeriesProvider) {
         this.barSeriesProvider = barSeriesProvider;
     }
 

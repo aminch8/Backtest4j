@@ -17,7 +17,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class AbstractBarSeriesProvider {
+public class BaseBarSeriesProvider {
 
     private BarSeries completeBaseBarSeriesHolder;
 
@@ -40,7 +40,7 @@ public class AbstractBarSeriesProvider {
 
     private List<TimeFrame> allowedTimeFrames = Arrays.stream(TimeFrame.values()).collect(Collectors.toList());
 
-    public AbstractBarSeriesProvider(BarSeries barSeries, TimeFrame timeFrame,String symbol) {
+    BaseBarSeriesProvider(BarSeries barSeries, TimeFrame timeFrame, String symbol) {
         this.baseTimeFrame = timeFrame;
         this.maximumBars = barSeries.getMaximumBarCount();
         allowedTimeFrames = allowedTimeFrames.subList(timeFrame.getIndex(),allowedTimeFrames.size());
