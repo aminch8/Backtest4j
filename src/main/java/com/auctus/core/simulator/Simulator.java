@@ -76,13 +76,38 @@ public class Simulator<T extends AbstractTradingSystem> {
 
     private void fundingRateFees() {
         BarSeries baseBarSeries = tradingSystem.getBarSeriesProvider().getBaseBarSeries();
-        if (baseBarSeries.getBarCount()<2) return;
         Bar lastBar = baseBarSeries.getLastBar();
         Bar previousBar = baseBarSeries.getBar(baseBarSeries.getBarCount()-2);
-        ZonedDateTime lastBarEndTime = lastBar.getEndTime();
-        ZonedDateTime previousBarEndTime = previousBar.getEndTime();
+        ZonedDateTime openTime = lastBar.getBeginTime();
+        ZonedDateTime closeTime = lastBar.getEndTime();
+        ZonedDateTime startOfDayOnOpen = openTime.withHour(0).withHour(0).withSecond(0).withNano(0);
+        ZonedDateTime checkPoint = startOfDayOnOpen;
 
-        lastBarEndTime.withHour(0).withMinute(0).withSecond(0).withNano(0);
+        int fundingRatesHappened=0;
+
+        switch (fundingRate.getPeriodicCostInterval()){
+            case EIGHT_HOURS:
+                if (openTime.equals(checkPoint)){
+                    fundingRatesHappened++;
+                }
+                while (checkPoint.isBefore(closeTime)){
+                    checkPoint = checkPoint.plusHours(8);
+                    if (checkPoint.isBefore(closeTime)){
+                        fundingRatesHappened++;
+                    }
+                }
+            case DAILY:
+                if (openTime.equals(checkPoint)){
+                    fundingRatesHappened++;
+                }
+                while (checkPoint.isBefore(closeTime)){
+                    checkPoint = checkPoint.plusHours(24);
+                    if (checkPoint.isBefore(closeTime)){
+                        fundingRatesHappened++;
+                    }
+                }
+        }
+
 
     }
 

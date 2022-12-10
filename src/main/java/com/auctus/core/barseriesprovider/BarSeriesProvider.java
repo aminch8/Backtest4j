@@ -6,8 +6,8 @@ import org.ta4j.core.BarSeries;
 
 public class BarSeriesProvider extends AbstractBarSeriesProvider {
 
-    public BarSeriesProvider(BarSeries barSeries, TimeFrame timeFrame) {
-        super(barSeries, timeFrame);
-    }
 
+    public BarSeriesProvider(BarSeries barSeries, TimeFrame timeFrame, String symbol) {
+        super(barSeries, timeFrame, symbol);
+    }
 }
