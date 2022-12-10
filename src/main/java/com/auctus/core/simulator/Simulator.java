@@ -24,12 +24,8 @@ public class Simulator {
     private List<TradeLog> tradeHistory = new ArrayList<>();
     private List<BalanceSnapshot> balanceSnapshots = new ArrayList<>();
 
-    public Simulator(Class<? extends AbstractTradingSystem> tradingSystem) {
-        try{
-            this.tradingSystem = tradingSystem.getConstructor().newInstance();
-        }catch (Exception e){
-            throw new SimulatorException("Cannot create instance of class " + tradingSystem.getName());
-        }
+    public Simulator(AbstractTradingSystem abstractTradingSystem) {
+        this.tradingSystem = abstractTradingSystem;
     }
 
     public void startSimulation(){

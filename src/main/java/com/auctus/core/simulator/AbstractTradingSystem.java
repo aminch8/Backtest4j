@@ -1,6 +1,6 @@
 package com.auctus.core.simulator;
 
-import com.auctus.core.barseriesprovider.BaseBarSeriesProvider;
+import com.auctus.core.barseriesprovider.BarSeriesProvider;
 import com.auctus.core.domains.*;
 import com.auctus.core.utils.NumUtil;
 import lombok.Getter;
@@ -27,9 +27,9 @@ public abstract class AbstractTradingSystem {
     public abstract Slippage getSlippage();
 
     @Getter
-    private final BaseBarSeriesProvider barSeriesProvider;
+    private final BarSeriesProvider barSeriesProvider;
 
-    public AbstractTradingSystem(BaseBarSeriesProvider barSeriesProvider) {
+    public AbstractTradingSystem(BarSeriesProvider barSeriesProvider) {
         this.barSeriesProvider = barSeriesProvider;
     }
 
