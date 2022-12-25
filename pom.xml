@@ -28,6 +28,12 @@
             <scope>provided</scope>
         </dependency>
 
+        <dependency>
+            <groupId>com.auctus</groupId>
+            <artifactId>mt5-java</artifactId>
+            <version>1.0.0</version>
+        </dependency>
+
 
 
     </dependencies>

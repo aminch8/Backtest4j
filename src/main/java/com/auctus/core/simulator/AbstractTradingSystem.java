@@ -15,12 +15,12 @@ public abstract class AbstractTradingSystem {
     private List<Order> orders=new ArrayList<Order>();
     private Position position=new Position();
     @Getter
-    private Num balance= NumUtil.getNum(this.startingBalance());
+    private Num balance= NumUtil.getNum(startingBalance());
 
-    public abstract Order onBuyCondition();
-    public abstract Order onSellCondition();
-    public abstract Order onExitBuyCondition();
-    public abstract Order onExitSellCondition();
+    public abstract void onBuyCondition();
+    public abstract void onSellCondition();
+    public abstract void onExitBuyCondition();
+    public abstract void onExitSellCondition();
     public abstract Number startingBalance();
     public abstract FundingRate getFundingRate();
     public abstract Commission getCommission();
@@ -49,6 +49,12 @@ public abstract class AbstractTradingSystem {
         this.orders.add(order);
     }
 
+    public void addOrder(Order... orders){
+        for (Order order : orders) {
+            this.orders.add(order);
+        }
+    }
+
     public void clearAllOrders(){
         this.orders=new ArrayList<Order>();
     }
@@ -70,6 +76,9 @@ public abstract class AbstractTradingSystem {
                     reductionInPercent.dividedBy(NumUtil.getNum(100))
                 )
         );
+    }
+    public void clearOrder(Order order){
+        this.orders.remove(order);
     }
 
 

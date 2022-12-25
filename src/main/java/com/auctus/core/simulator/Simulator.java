@@ -12,25 +12,30 @@ import org.ta4j.core.num.Num;
 
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 @Slf4j
-public class Simulator {
+public class Simulator<T extends AbstractTradingSystem> {
 
-    private AbstractTradingSystem tradingSystem;
-    private Slippage slippage = tradingSystem.getSlippage()==null?Slippage.ofPercentPrice(0):tradingSystem.getSlippage();
-    private Commission commission = tradingSystem.getCommission()==null?Commission.ofPercentPrice(0):tradingSystem.getCommission();
-    private FundingRate fundingRate = tradingSystem.getFundingRate()==null?FundingRate.ofPercentPrice(0, PeriodicCostInterval.EIGHT_HOURS):tradingSystem.getFundingRate();
+    private T tradingSystem;
+    private Slippage slippage;
+    private Commission commission;
+    private FundingRate fundingRate;
     private List<TradeLog> tradeHistory = new ArrayList<>();
     private List<BalanceSnapshot> balanceSnapshots = new ArrayList<>();
 
-    public Simulator(AbstractTradingSystem abstractTradingSystem) {
+    public Simulator(T abstractTradingSystem) {
         this.tradingSystem = abstractTradingSystem;
+        slippage = tradingSystem.getSlippage() == null ? Slippage.ofPercentPrice(0) : tradingSystem.getSlippage();
+        commission = tradingSystem.getCommission() == null ? Commission.ofPercentPrice(0) : tradingSystem.getCommission();
+        fundingRate = tradingSystem.getFundingRate() == null ? FundingRate.ofPercentPrice(0, PeriodicCostInterval.EIGHT_HOURS) : tradingSystem.getFundingRate();
     }
 
-    public void startSimulation(){
-        while (tradingSystem.getBarSeriesProvider().tickForward()){
+    public void startSimulation() {
+        while (tradingSystem.getBarSeriesProvider().tickForward()) {
             this.simulateTick();
+            System.out.println("QQQ");
         }
         log.info("Simulation Ended : " + this.tradingSystem.getSymbol());
         log.info("Total Bars Simulated : " + this.tradingSystem.getBarSeriesProvider().getBaseBarSeries().getBarCount());
@@ -40,35 +45,9 @@ public class Simulator {
 
     private void simulateTick() {
         processTick();
-        Position runningPosition = tradingSystem.getRunningPosition();
-
-        if (runningPosition.isLong()) {
-            Order exitBuy = tradingSystem.onExitBuyCondition();
-            if (exitBuy!=null && !exitBuy.getVolume().isZero() && exitBuy.getOrderType() == OrderType.LIMIT)
-                tradingSystem.addOrder(exitBuy);
-            else analyzeOrder(exitBuy);
-        }
-
-        if (runningPosition.isShort()) {
-            Order exitSell = tradingSystem.onExitSellCondition();
-            if (exitSell!=null && !exitSell.getVolume().isZero() && exitSell.getOrderType() == OrderType.LIMIT)
-                tradingSystem.addOrder(exitSell);
-            else analyzeOrder(exitSell);
-        }
-
-        Order buyOrder = tradingSystem.onBuyCondition();
-        if (buyOrder!=null && !buyOrder.getVolume().isZero() && buyOrder.getOrderType() == OrderType.LIMIT)
-            tradingSystem.addOrder(buyOrder);
-        else analyzeOrder(buyOrder);
-
-
-        Order sellOrder = tradingSystem.onSellCondition();
-        if (sellOrder!=null && !sellOrder.getVolume().isZero() && sellOrder.getOrderType() == OrderType.LIMIT)
-            tradingSystem.addOrder(sellOrder);
-        else analyzeOrder(sellOrder);
-
-       this.createSnapShotOfBalance();
-       this.fundingRateFees();
+        analyzeOrders(tradingSystem.getActiveOrders());
+        this.createSnapShotOfBalance();
+        this.fundingRateFees();
     }
 
     private void fundingRateFees() {
@@ -79,32 +58,32 @@ public class Simulator {
         ZonedDateTime startOfDayOnOpen = openTime.withHour(0).withHour(0).withSecond(0).withNano(0);
         ZonedDateTime checkPoint = startOfDayOnOpen;
 
-        int fundingRatesHappened=0;
+        int fundingRatesHappened = 0;
 
-        switch (fundingRate.getPeriodicCostInterval()){
+        switch (fundingRate.getPeriodicCostInterval()) {
             case EIGHT_HOURS:
-                if (openTime.equals(checkPoint)){
+                if (openTime.equals(checkPoint)) {
                     fundingRatesHappened++;
                 }
-                while (checkPoint.isBefore(closeTime)){
+                while (checkPoint.isBefore(closeTime)) {
                     checkPoint = checkPoint.plusHours(8);
-                    if (checkPoint.isBefore(closeTime)){
+                    if (checkPoint.isBefore(closeTime)) {
                         fundingRatesHappened++;
                     }
                 }
             case DAILY:
-                if (openTime.equals(checkPoint)){
+                if (openTime.equals(checkPoint)) {
                     fundingRatesHappened++;
                 }
-                while (checkPoint.isBefore(closeTime)){
+                while (checkPoint.isBefore(closeTime)) {
                     checkPoint = checkPoint.plusHours(24);
-                    if (checkPoint.isBefore(closeTime)){
+                    if (checkPoint.isBefore(closeTime)) {
                         fundingRatesHappened++;
                     }
                 }
         }
         Position runningPosition = tradingSystem.getRunningPosition();
-        Num fundingFee = fundingRate.getFundingRateValue(runningPosition,lastBar.getClosePrice()).multipliedBy(NumUtil.getNum(fundingRatesHappened));
+        Num fundingFee = fundingRate.getFundingRateValue(runningPosition, lastBar.getClosePrice()).multipliedBy(NumUtil.getNum(fundingRatesHappened));
         tradingSystem.reduceBalance(fundingFee);
     }
 
@@ -123,7 +102,7 @@ public class Simulator {
         if (order == null || order.getVolume().isZero()) return;
 
         if (order.isReduceOnly()) {
-           closePositionOrderAnalyze(order);
+            closePositionOrderAnalyze(order);
         } else {
             openPositionOrderAnalyze(order);
         }
@@ -131,7 +110,19 @@ public class Simulator {
     }
 
     private void analyzeOrders(List<Order> orders) {
+        if (tradingSystem.getRunningPosition().isLong()){
+            orders.sort(Comparator.comparing(Order::isReduceOnly).reversed());
+            orders.sort(Comparator.comparing(Order::getOrderType));
+            orders.sort(Comparator.comparing(Order::getPrice));
+        }else if (tradingSystem.getRunningPosition().isShort()){
+            orders.sort(Comparator.comparing(Order::isReduceOnly).reversed());
+            orders.sort(Comparator.comparing(Order::getOrderType));
+            orders.sort(Comparator.comparing(Order::getPrice).reversed());
+        }
         for (Order order : orders) {
+            log.debug("Debugging orders order : " + order.getOrderType());
+            log.debug("Debugging orders order : " + order.isReduceOnly());
+            log.debug("--------------");
             this.analyzeOrder(order);
         }
     }
@@ -141,29 +132,30 @@ public class Simulator {
         analyzeOrders(activeOrders);
     }
 
-    private void openPositionOrderAnalyze(Order order){
+    private void openPositionOrderAnalyze(Order order) {
         Num orderVolume = order.getVolume();
         Num orderPrice = order.getPrice();
         Bar lastCandle = this.tradingSystem.getBarSeriesProvider().getBaseBarSeries().getLastBar();
-        Num executedPrice = null;
+        Num executedPrice = lastCandle.getClosePrice();
         Position position = tradingSystem.getRunningPosition();
-        if (order.getOrderType() == OrderType.MARKET) {
-            executedPrice = lastCandle.getClosePrice();
-            executedPrice = slippage.getSlippedPrice(executedPrice,order);
-            tradingSystem.reduceBalance(commission.getCostOfCommission(lastCandle.getClosePrice(), order));
-        }
-
-        if (order.getOrderType() == OrderType.LIMIT) {
-            executedPrice = orderPrice;
-            if (orderVolume.isPositive()) {
-                if (lastCandle.getLowPrice().isGreaterThan(orderPrice)) return;
-            } else {
-                if (lastCandle.getHighPrice().isLessThan(orderPrice)) return;
+        switch (order.getOrderType()){
+            case MARKET:{
+                executedPrice = lastCandle.getClosePrice();
+                executedPrice = slippage.getSlippedPrice(executedPrice, order);
+                tradingSystem.reduceBalance(commission.getCostOfCommission(lastCandle.getClosePrice(), order));
+                break;
             }
-            tradingSystem.reduceBalance(commission.getCostOfCommission(orderPrice, order));
+            case LIMIT:{
+                executedPrice = orderPrice;
+                if (orderVolume.isPositive()) {
+                    if (lastCandle.getLowPrice().isGreaterThan(orderPrice)) return;
+                } else {
+                    if (lastCandle.getHighPrice().isLessThan(orderPrice)) return;
+                }
+                tradingSystem.reduceBalance(commission.getCostOfCommission(orderPrice, order));
+                break;
+            }
         }
-
-
         TradeLog tradeLog = TradeLog.createLog(tradingSystem.getSymbol(), orderVolume, executedPrice, lastCandle.getEndTime());
         tradeHistory.add(tradeLog);
 
@@ -171,14 +163,14 @@ public class Simulator {
         tradingSystem.updatePosition(position);
     }
 
-    private void closePositionOrderAnalyze(Order order){
+    private void closePositionOrderAnalyze(Order order) {
         Num orderVolume = order.getVolume();
         Bar lastCandle = this.tradingSystem.getBarSeriesProvider().getBaseBarSeries().getLastBar();
         Position position = this.tradingSystem.getRunningPosition();
-        Num executedPrice = null;
-        Num newNetSize = null;
+        Num executedPrice = lastCandle.getClosePrice();
+        Num newNetSize = position.getSize();
 
-        switch (order.getOrderType()){
+        switch (order.getOrderType()) {
             case LIMIT:
                 Num orderPrice = order.getPrice();
                 executedPrice = orderPrice;
@@ -190,6 +182,7 @@ public class Simulator {
                         tradingSystem.reduceBalance(commission.getCostOfCommission(orderPrice, order));
                     } else {
                         log.error("Something has gone wrong... Reduce only order on wrong side of the position?");
+                        tradingSystem.clearOrder(order);
                     }
                 } else {
                     //closing long position
@@ -199,12 +192,13 @@ public class Simulator {
                         tradingSystem.reduceBalance(commission.getCostOfCommission(orderPrice, order));
                     } else {
                         log.error("Something has gone wrong... Reduce only order on wrong side of the position?");
+                        tradingSystem.clearOrder(order);
                     }
                 }
                 break;
             case MARKET:
                 executedPrice = lastCandle.getClosePrice();
-                executedPrice = slippage.getSlippedPrice(executedPrice,order);
+                executedPrice = slippage.getSlippedPrice(executedPrice, order);
                 if (orderVolume.isPositive()) {
                     //closing short position
                     if (position.getSize().isNegative()) {
@@ -212,6 +206,7 @@ public class Simulator {
                         tradingSystem.reduceBalance(commission.getCostOfCommission(lastCandle.getClosePrice(), order));
                     } else {
                         log.error("Something has gone wrong... Reduce only order on wrong side of the position?");
+                        tradingSystem.clearOrder(order);
                     }
                 } else {
                     //closing long position
@@ -220,10 +215,12 @@ public class Simulator {
                         tradingSystem.reduceBalance(commission.getCostOfCommission(lastCandle.getClosePrice(), order));
                     } else {
                         log.error("Something has gone wrong... Reduce only order on wrong side of the position?");
+                        tradingSystem.clearOrder(order);
                     }
                 }
                 break;
-            default: return;
+            default:
+                return;
         }
 
         Num deltaPositionSize = newNetSize.minus(position.getSize());

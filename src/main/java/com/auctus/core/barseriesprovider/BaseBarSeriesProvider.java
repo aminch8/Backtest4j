@@ -34,7 +34,7 @@ public class BaseBarSeriesProvider {
 
     private TimeFrame baseTimeFrame;
     private long maximumBars=0;
-    private int currentBarIndex = 1;
+    private int currentBarIndex = 0;
     @Getter
     private String symbol;
 
@@ -42,7 +42,7 @@ public class BaseBarSeriesProvider {
 
     BaseBarSeriesProvider(BarSeries barSeries, TimeFrame timeFrame, String symbol) {
         this.baseTimeFrame = timeFrame;
-        this.maximumBars = barSeries.getMaximumBarCount();
+        this.maximumBars = barSeries.getBarCount();
         allowedTimeFrames = allowedTimeFrames.subList(timeFrame.getIndex(),allowedTimeFrames.size());
         completeBaseBarSeriesHolder = barSeries;
         this.symbol=symbol;
@@ -55,7 +55,7 @@ public class BaseBarSeriesProvider {
 
 
     public BarSeries getBarSeries(TimeFrame timeFrame){
-        if (timeFrame.getIndex()<=this.baseTimeFrame.getIndex()){
+        if (timeFrame.getIndex()<this.baseTimeFrame.getIndex()){
             throw new IllegalStateException("Accessing lower time frame than the main bar series is not possible");
         }
         switch (timeFrame){
@@ -116,8 +116,8 @@ public class BaseBarSeriesProvider {
             throw new IllegalStateException("Wrong Timeframe given for chosen bar series");
         }
         BarSeries baseBarSeries = getBarSeries(baseTimeFrame);
-        Bar bar = baseBarSeries.getBar(currentBarIndex);
-        Bar previousBar = baseBarSeries.getBar(currentBarIndex-1);
+        Bar bar = baseBarSeries.getBar(baseBarSeries.getBarCount()-1);
+        Bar previousBar = baseBarSeries.getBar(baseBarSeries.getBarCount()-2);
 
         ZonedDateTime openTime = bar.getBeginTime();
         ZonedDateTime closeTime = bar.getEndTime();
@@ -147,6 +147,7 @@ public class BaseBarSeriesProvider {
                   fiveMinuteBarSeries.addPrice(bar.getClosePrice());
               }
           }
+          break;
           case M15:{
               if (ZDTUtil.zonedDateTimeDifferenceInMinutes(previousOpenTime,openTime)>=15){
                   fifteenMinutesBarSeries.addBar(
@@ -165,6 +166,7 @@ public class BaseBarSeriesProvider {
                   fifteenMinutesBarSeries.addPrice(bar.getClosePrice());
               }
           }
+          break;
           case M30:{
               if (ZDTUtil.zonedDateTimeDifferenceInMinutes(previousOpenTime,openTime)>=30){
                   thirtyMinutesBarSeries.addBar(
@@ -183,6 +185,7 @@ public class BaseBarSeriesProvider {
                   thirtyMinutesBarSeries.addPrice(bar.getClosePrice());
               }
           }
+          break;
           case H1:{
               if (ZDTUtil.zonedDateTimeDifferenceInMinutes(previousOpenTime,openTime)>=60){
                   oneHourBarSeries.addBar(
@@ -201,7 +204,7 @@ public class BaseBarSeriesProvider {
                   oneHourBarSeries.addPrice(bar.getClosePrice());
               }
           }
-
+          break;
           case H2:{
               if (ZDTUtil.zonedDateTimeDifferenceInMinutes(previousOpenTime,openTime)>=120 ){
                   twoHourBarSeries.addBar(
@@ -220,7 +223,7 @@ public class BaseBarSeriesProvider {
                   twoHourBarSeries.addPrice(bar.getClosePrice());
               }
           }
-
+          break;
           case H4:{
               if ( ZDTUtil.zonedDateTimeDifferenceInMinutes(previousOpenTime,openTime)>=240 ){
                   fourHourBarSeries.addBar(
@@ -239,7 +242,7 @@ public class BaseBarSeriesProvider {
                   fourHourBarSeries.addPrice(bar.getClosePrice());
               }
           }
-
+          break;
           case D1:{
               if ( openTime.getDayOfWeek().getValue()!=previousOpenTime.getDayOfWeek().getValue() ){
                   dailyBarSeries.addBar(
@@ -258,7 +261,7 @@ public class BaseBarSeriesProvider {
                   dailyBarSeries.addPrice(bar.getClosePrice());
               }
           }
-
+          break;
           case W1:{
               if ( openTime.getDayOfWeek()==DayOfWeek.MONDAY && previousOpenTime.getDayOfWeek()!=DayOfWeek.MONDAY ){
                   weeklyBarSeries.addBar(
@@ -277,7 +280,7 @@ public class BaseBarSeriesProvider {
                   weeklyBarSeries.addPrice(bar.getClosePrice());
               }
           }
-
+          break;
           case Mo:{
               if (openTime.getDayOfMonth() == 1 && previousOpenTime.getDayOfMonth() != 1 ){
                   monthlyBarSeries.addBar(
@@ -296,6 +299,7 @@ public class BaseBarSeriesProvider {
                   monthlyBarSeries.addPrice(bar.getClosePrice());
               }
           }
+          break;
 
       }
 
@@ -313,6 +317,17 @@ public class BaseBarSeriesProvider {
     }
 
     private void updateBaseBarSeries(){
+        if (currentBarIndex<1){
+            BarSeries barSeries = getBarSeries(this.baseTimeFrame);
+            barSeries.addBar(completeBaseBarSeriesHolder.getBar(currentBarIndex));
+            TimeFrame[] timeFrames = TimeFrame.values();
+            for (TimeFrame timeFrame : timeFrames) {
+                if (timeFrame.getIndex()>this.baseTimeFrame.getIndex()){
+                    getBarSeries(timeFrame).addBar(completeBaseBarSeriesHolder.getBar(currentBarIndex));
+                }
+            }
+            currentBarIndex++;
+        }
         BarSeries barSeries = getBarSeries(this.baseTimeFrame);
         barSeries.addBar(completeBaseBarSeriesHolder.getBar(currentBarIndex));
         currentBarIndex++;
