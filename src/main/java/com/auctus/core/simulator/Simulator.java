@@ -183,6 +183,7 @@ public class Simulator<T extends AbstractTradingSystem> {
                     } else {
                         log.error("Something has gone wrong... Reduce only order on wrong side of the position?");
                         tradingSystem.clearOrder(order);
+                        return;
                     }
                 } else {
                     //closing long position
@@ -193,6 +194,7 @@ public class Simulator<T extends AbstractTradingSystem> {
                     } else {
                         log.error("Something has gone wrong... Reduce only order on wrong side of the position?");
                         tradingSystem.clearOrder(order);
+                        return;
                     }
                 }
                 break;
@@ -207,6 +209,7 @@ public class Simulator<T extends AbstractTradingSystem> {
                     } else {
                         log.error("Something has gone wrong... Reduce only order on wrong side of the position?");
                         tradingSystem.clearOrder(order);
+                        return;
                     }
                 } else {
                     //closing long position
@@ -216,6 +219,7 @@ public class Simulator<T extends AbstractTradingSystem> {
                     } else {
                         log.error("Something has gone wrong... Reduce only order on wrong side of the position?");
                         tradingSystem.clearOrder(order);
+                        return;
                     }
                 }
                 break;
