@@ -46,8 +46,8 @@ public class Simulator<T extends AbstractTradingSystem> {
     private void simulateTick() {
         processTick();
         analyzeOrders(tradingSystem.getActiveOrders());
-        this.createSnapShotOfBalance();
         this.fundingRateFees();
+        this.createSnapShotOfBalance();
     }
 
     private void fundingRateFees() {
