@@ -4,7 +4,7 @@ package com.auctus.core.services;
 import com.mt5.core.clients.MT5Client;
 import com.mt5.core.domains.Candle;
 import com.mt5.core.domains.History;
-import com.mt5.core.enums.TimeFrame;
+import com.mt5.core.enums.MT5TimeFrame;
 import org.ta4j.core.BarSeries;
 import org.ta4j.core.BaseBarSeriesBuilder;
 
@@ -17,7 +17,7 @@ public class BarService {
 
     private final MT5Client mt5Client = new MT5Client.MT5ClientFactory(2201,2202).build();
 
-    public BarSeries getBarSeries(String symbol, TimeFrame timeFrame, ZonedDateTime fromDate, ZonedDateTime toDate){
+    public BarSeries getBarSeries(String symbol, MT5TimeFrame timeFrame, ZonedDateTime fromDate, ZonedDateTime toDate){
 
         History history = mt5Client.getHistory(symbol, Date.from(fromDate.toInstant()),Date.from(toDate.toInstant()),timeFrame);
 

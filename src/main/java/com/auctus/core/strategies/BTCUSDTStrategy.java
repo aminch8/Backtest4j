@@ -12,6 +12,7 @@ import org.ta4j.core.Bar;
 import org.ta4j.core.BarSeries;
 import org.ta4j.core.indicators.EMAIndicator;
 import org.ta4j.core.indicators.helpers.ClosePriceIndicator;
+import org.ta4j.core.num.Num;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -25,7 +26,7 @@ public class BTCUSDTStrategy extends AbstractTradingSystem {
     public BTCUSDTStrategy(BarSeriesProvider barSeriesProvider)
     {
         super(barSeriesProvider);
-        this.shorterEMA=new EMAIndicator(new ClosePriceIndicator(getBarSeriesProvider().getBaseBarSeries()),20);
+        this.shorterEMA=new EMAIndicator(new ClosePriceIndicator(getBarSeriesProvider().getBaseBarSeries()),50);
         this.longerEMA=new EMAIndicator(new ClosePriceIndicator(getBarSeriesProvider().getBaseBarSeries()),200);
     }
 
@@ -73,8 +74,8 @@ public class BTCUSDTStrategy extends AbstractTradingSystem {
     }
 
     @Override
-    public Number getStartingBalance() {
-        return 1000;
+    public Num getStartingBalance() {
+        return NumUtil.getNum(1000);
     }
 
 

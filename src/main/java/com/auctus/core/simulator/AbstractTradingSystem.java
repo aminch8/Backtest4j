@@ -15,13 +15,13 @@ public abstract class AbstractTradingSystem {
     private List<Order> orders=new ArrayList<Order>();
     private Position position=new Position();
     @Getter
-    private Num balance= NumUtil.getNum(getStartingBalance());
+    private Num balance= getStartingBalance();
 
     public abstract void onBuyCondition();
     public abstract void onSellCondition();
     public abstract void onExitBuyCondition();
     public abstract void onExitSellCondition();
-    public abstract Number getStartingBalance();
+    public abstract Num getStartingBalance();
     public abstract FundingRate getFundingRate();
     public abstract Commission getCommission();
     public abstract Slippage getSlippage();

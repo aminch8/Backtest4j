@@ -6,6 +6,7 @@ import com.auctus.core.domains.enums.PeriodicCostInterval;
 import com.auctus.core.exceptions.SimulatorException;
 import com.auctus.core.utils.NumUtil;
 import com.auctus.core.utils.OrderUtil;
+import com.auctus.core.utils.ZDTUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.knowm.xchart.*;
 import org.knowm.xchart.style.Styler;
@@ -20,6 +21,7 @@ import org.ta4j.core.num.Num;
 
 import java.io.IOException;
 import java.time.ZonedDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -48,13 +50,30 @@ public class Simulator<T extends AbstractTradingSystem> {
         log.info("Total Bars Simulated : " + this.tradingSystem.getBarSeriesProvider().getBaseBarSeries().getBarCount());
         log.info("Ending Balance : " + this.tradingSystem.getBalance());
         log.info("Starting Balance : " + this.tradingSystem.getStartingBalance());
-        log.info("Total trades taken : " + this.tradeHistory.size());
-        for (TradeLog tradeLog : tradeHistory) {
-            System.out.println(tradeLog);
-        }
+        log.info("Total trades taken : " +  getTotalNumberOfTrades());
         log.info("Total number of balance snapshots : " + balanceSnapshots.size() );
         log.info("Maximum drawdown : " + getMaximumDrawDown() + "%");
         log.info("Profit factor is : " + getProfitFactor());
+        log.info("Return Percent: " + getReturnPercent());
+        log.info("Return Raw: " + getReturnRaw());
+        log.info("CAGR : " + getCAGR());
+    }
+
+    private Num getCAGR() {
+        BalanceSnapshot firstSnapshot = balanceSnapshots.get(0);
+        BalanceSnapshot lastSnapshot = balanceSnapshots.get(balanceSnapshots.size()-1);
+        double years = (double) ZDTUtil.zonedDateTimeDifference(firstSnapshot.getTime(),lastSnapshot.getTime(), ChronoUnit.DAYS)/365d;
+        return lastSnapshot.getBalanceRPNL().dividedBy(firstSnapshot.getBalanceRPNL())
+                .pow(NumUtil.getNum(1d/years)).minus(NumUtil.getNum(1)).multipliedBy(NumUtil.getNum(100));
+
+    }
+
+    private Num getReturnRaw() {
+        return this.tradingSystem.getBalance().minus(this.tradingSystem.getStartingBalance());
+    }
+
+    private Num getReturnPercent() {
+        return this.tradingSystem.getBalance().dividedBy(this.tradingSystem.getStartingBalance()).minus(NumUtil.getNum(1)).multipliedBy(NumUtil.getNum(100));
     }
 
     private void processTick() {
@@ -81,7 +100,7 @@ public class Simulator<T extends AbstractTradingSystem> {
                 }
                 while (checkPoint.isBefore(closeTime)) {
                     checkPoint = checkPoint.plusHours(8);
-                    if (checkPoint.isBefore(closeTime)) {
+                    if (checkPoint.isBefore(closeTime) && openTime.isBefore(checkPoint)) {
                         fundingRatesHappened++;
                     }
                 }
@@ -242,14 +261,22 @@ public class Simulator<T extends AbstractTradingSystem> {
 
     }
 
-    public void generateBalanceDiagrams(boolean saveToFile) {
+    public void generateBalanceDiagrams(boolean saveToFile,boolean showBuyAndHold) {
         List<Number> xData = new ArrayList<>();
         List<Number> balance = new ArrayList<>();
         List<Number> equity = new ArrayList<>();
+        List<Number> buyAndHold = new ArrayList<>();
+        Num openPriceOfSimluation = tradingSystem.getBarSeriesProvider().getBaseBarSeries().getFirstBar().getOpenPrice();
+        int indexOfBuyAndHold = 1;
         for (BalanceSnapshot balanceSnapshot : balanceSnapshots) {
             balance.add(balanceSnapshot.getBalanceRPNL().doubleValue());
             equity.add(balanceSnapshot.getBalanceUPNL().doubleValue());
+            Num latestPrice = tradingSystem.getBarSeriesProvider().getBaseBarSeries().getBar(indexOfBuyAndHold).getClosePrice();
+            buyAndHold.add(
+                    this.tradingSystem.getStartingBalance().multipliedBy(latestPrice.dividedBy(openPriceOfSimluation)).doubleValue()
+            );
             xData.add(balance.size());
+            indexOfBuyAndHold++;
         }
         XYChart balanceAndEquityChart = new XYChartBuilder().xAxisTitle("Bar")
                 .yAxisTitle("Balance")
@@ -258,11 +285,13 @@ public class Simulator<T extends AbstractTradingSystem> {
         balanceAndEquityChart.getStyler().setDefaultSeriesRenderStyle(XYSeries.XYSeriesRenderStyle.Line);
         XYSeries balanceSeries = balanceAndEquityChart.addSeries("Balance",xData,balance);
         XYSeries equitySeries = balanceAndEquityChart.addSeries("Equity",xData,equity);
+
+
         balanceSeries.setSmooth(true);
         balanceSeries.setLineStyle(SeriesLines.SOLID);
-        balanceSeries.setLineColor(XChartSeriesColors.BLACK);
-        balanceSeries.setMarkerColor(XChartSeriesColors.BLACK);
-        balanceSeries.setFillColor(XChartSeriesColors.BLACK);
+        balanceSeries.setLineColor(XChartSeriesColors.BLUE);
+        balanceSeries.setMarkerColor(XChartSeriesColors.BLUE);
+        balanceSeries.setFillColor(XChartSeriesColors.BLUE);
         balanceSeries.setMarker(SeriesMarkers.NONE);
 
         equitySeries.setSmooth(true);
@@ -272,10 +301,24 @@ public class Simulator<T extends AbstractTradingSystem> {
         equitySeries.setFillColor(XChartSeriesColors.YELLOW);
         equitySeries.setMarker(SeriesMarkers.NONE);
 
+        if (showBuyAndHold){
+            XYSeries buyAndHoldSeries = balanceAndEquityChart.addSeries("Buy&Hold",xData,buyAndHold);
+            buyAndHoldSeries.setSmooth(true);
+            buyAndHoldSeries.setLineStyle(SeriesLines.SOLID);
+            buyAndHoldSeries.setLineColor(XChartSeriesColors.BLACK);
+            buyAndHoldSeries.setMarkerColor(XChartSeriesColors.BLACK);
+            buyAndHoldSeries.setFillColor(XChartSeriesColors.BLACK);
+            buyAndHoldSeries.setMarker(SeriesMarkers.NONE);
+        }
+
         balanceAndEquityChart.getStyler().setCursorEnabled(true);
+        balanceAndEquityChart.getStyler().setZoomEnabled(true);
+        balanceAndEquityChart.getStyler().setZoomResetByButton(true);
+        balanceAndEquityChart.getStyler().setZoomResetByDoubleClick(true);
+        balanceAndEquityChart.getStyler().setZoomSelectionColor(XChartSeriesColors.CYAN);
 
 
-        new SwingWrapper(balanceAndEquityChart).displayChart();
+        new SwingWrapper(balanceAndEquityChart).isCentered(true).displayChart();
 
         if (saveToFile){
             try {
@@ -289,8 +332,8 @@ public class Simulator<T extends AbstractTradingSystem> {
 
     private Num getMaximumDrawDown() {
         Num maximumDrawDown = NumUtil.getNum(0);
-        Num maximumBalance = NumUtil.getNum(tradingSystem.getStartingBalance());
-        Num minimumBalance = NumUtil.getNum(tradingSystem.getStartingBalance());
+        Num maximumBalance = tradingSystem.getStartingBalance();
+        Num minimumBalance = tradingSystem.getStartingBalance();
         for (BalanceSnapshot snapshot : balanceSnapshots) {
             Num balanceRealized = snapshot.getBalanceRPNL();
             Num balanceUnrealized = snapshot.getBalanceUPNL();
@@ -320,6 +363,10 @@ public class Simulator<T extends AbstractTradingSystem> {
             }
         }
         return balanceGained.dividedBy(balanceLost.abs());
+    }
+
+    private int getTotalNumberOfTrades(){
+        return tradeHistory.size();
     }
 
     private void checkLiquidation() {
