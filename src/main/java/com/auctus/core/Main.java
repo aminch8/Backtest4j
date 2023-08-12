@@ -1,8 +1,10 @@
 package com.auctus.core;
 
 import com.auctus.core.barseriesprovider.BarSeriesProvider;
+import com.auctus.core.domains.TradeLog;
 import com.auctus.core.domains.enums.TimeFrame;
 import com.auctus.core.services.BarService;
+import com.auctus.core.simulator.SimulationAnalyzer;
 import com.auctus.core.simulator.Simulator;
 import com.auctus.core.strategies.BTCUSDTStrategy;
 import com.mt5.core.enums.MT5TimeFrame;
@@ -20,6 +22,8 @@ public class Main {
         BTCUSDTStrategy btcusdtStrategy = new BTCUSDTStrategy(barSeriesProvider);
         Simulator<BTCUSDTStrategy> simulator = new Simulator<>(btcusdtStrategy);
         simulator.startSimulation();
-        simulator.generateBalanceDiagrams(true,true);
+        SimulationAnalyzer simulationAnalyzer = new SimulationAnalyzer(simulator);
+        simulationAnalyzer.generateBalanceDiagrams(true,true);
+        System.out.println("Winning rate percent : " + simulationAnalyzer.getWinningRatePercent());
     }
 }
