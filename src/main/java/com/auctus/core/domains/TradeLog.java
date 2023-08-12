@@ -3,11 +3,13 @@ package com.auctus.core.domains;
 import com.auctus.core.domains.enums.TradeSide;
 import com.auctus.core.utils.NumUtil;
 import lombok.Data;
+import lombok.ToString;
 import org.ta4j.core.num.Num;
 
 import java.time.ZonedDateTime;
 
 @Data
+@ToString
 public class TradeLog {
 
     private String symbol;

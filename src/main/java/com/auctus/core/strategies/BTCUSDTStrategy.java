@@ -25,8 +25,8 @@ public class BTCUSDTStrategy extends AbstractTradingSystem {
     public BTCUSDTStrategy(BarSeriesProvider barSeriesProvider)
     {
         super(barSeriesProvider);
-        this.shorterEMA=new EMAIndicator(new ClosePriceIndicator(getBarSeriesProvider().getBaseBarSeries()),50);
-        this.longerEMA=new EMAIndicator(new ClosePriceIndicator(getBarSeriesProvider().getBaseBarSeries()),500);
+        this.shorterEMA=new EMAIndicator(new ClosePriceIndicator(getBarSeriesProvider().getBaseBarSeries()),20);
+        this.longerEMA=new EMAIndicator(new ClosePriceIndicator(getBarSeriesProvider().getBaseBarSeries()),200);
     }
 
     @Override
@@ -35,10 +35,12 @@ public class BTCUSDTStrategy extends AbstractTradingSystem {
         int index = getBarSeriesProvider().getBaseBarSeries().getBarCount()-1;
         BarSeries baseBarSeries = getBarSeriesProvider().getBaseBarSeries();
         Bar lastBar = baseBarSeries.getLastBar();
+
         if (
-                longerEMA.getValue(index).isGreaterThan(shorterEMA.getValue(index))
+                getRunningPosition().isEmpty() &&
+                shorterEMA.getValue(index).isGreaterThan(longerEMA.getValue(index))
                 &&
-                longerEMA.getValue(index-1).isLessThan(shorterEMA.getValue(index-1))
+                        shorterEMA.getValue(index-1).isLessThan(longerEMA.getValue(index-1))
         )
         {
             Order order = Order.ofMarketInLong(getBalance().max(NumUtil.getNum(0)).dividedBy(lastBar.getClosePrice()));
@@ -48,28 +50,16 @@ public class BTCUSDTStrategy extends AbstractTradingSystem {
 
     @Override
     public void onSellCondition() {
-        int index = getBarSeriesProvider().getBaseBarSeries().getBarCount()-1;
-        BarSeries baseBarSeries = getBarSeriesProvider().getBaseBarSeries();
-        Bar lastBar = baseBarSeries.getLastBar();
-        if (
-                longerEMA.getValue(index).isLessThan(shorterEMA.getValue(index))
-                        &&
-                        longerEMA.getValue(index-1).isGreaterThan(shorterEMA.getValue(index-1))
-        )
-        {
-            Order order =
-                    Order.ofMarketInShort(getBalance().max(NumUtil.getNum(0)).dividedBy(lastBar.getClosePrice()).multipliedBy(NumUtil.getNum(-1)));
-            addOrder(order);
-        }
     }
 
     @Override
     public void onExitBuyCondition() {
         int index = getBarSeriesProvider().getBaseBarSeries().getBarCount()-1;
         if (
-                longerEMA.getValue(index).isLessThan(shorterEMA.getValue(index))
+                !getRunningPosition().isEmpty() &&
+                        shorterEMA.getValue(index).isLessThan(longerEMA.getValue(index))
                         &&
-                        longerEMA.getValue(index-1).isGreaterThan(shorterEMA.getValue(index-1))
+                        shorterEMA.getValue(index-1).isGreaterThan(longerEMA.getValue(index-1))
         )
         {
             Order order =  Order.ofMarketOutLong(getRunningPosition().getSize());
@@ -80,24 +70,12 @@ public class BTCUSDTStrategy extends AbstractTradingSystem {
 
     @Override
     public void onExitSellCondition() {
-        int index = getBarSeriesProvider().getBaseBarSeries().getBarCount()-1;
-        if (
-                longerEMA.getValue(index).isGreaterThan(shorterEMA.getValue(index))
-                        &&
-                        longerEMA.getValue(index-1).isLessThan(shorterEMA.getValue(index-1))
-        )
-        {
-            Order order = Order.ofMarketOutShort(getRunningPosition().getSize());
-            addOrder(order);
-        }
     }
 
     @Override
-    public Number startingBalance() {
+    public Number getStartingBalance() {
         return 1000;
     }
-
-
 
 
     @Override

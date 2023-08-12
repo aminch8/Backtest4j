@@ -15,13 +15,13 @@ public abstract class AbstractTradingSystem {
     private List<Order> orders=new ArrayList<Order>();
     private Position position=new Position();
     @Getter
-    private Num balance= NumUtil.getNum(startingBalance());
+    private Num balance= NumUtil.getNum(getStartingBalance());
 
     public abstract void onBuyCondition();
     public abstract void onSellCondition();
     public abstract void onExitBuyCondition();
     public abstract void onExitSellCondition();
-    public abstract Number startingBalance();
+    public abstract Number getStartingBalance();
     public abstract FundingRate getFundingRate();
     public abstract Commission getCommission();
     public abstract Slippage getSlippage();
@@ -59,8 +59,19 @@ public abstract class AbstractTradingSystem {
         this.orders=new ArrayList<Order>();
     }
 
-    public void updatePosition(Position position){
-        this.position = position;
+    public void updatePosition(Num deltaPositionSize, Num executedPrice){
+        Num newAverageEntryPrice = this.position.getSize().multipliedBy(position.getAverageEntryPrice())
+                .plus(deltaPositionSize.multipliedBy(executedPrice))
+                .dividedBy(deltaPositionSize.plus(position.getSize()));
+
+        if (newAverageEntryPrice.isNaN()){
+            this.position.setSize(NumUtil.getNum(0));
+            this.position.setAverageEntryPrice(NumUtil.getNum(0));
+        }else {
+            this.position.setSize(position.getSize().plus(deltaPositionSize));
+            this.position.setAverageEntryPrice(newAverageEntryPrice);
+        }
+
     }
 
     public void addBalance(Num realizedProfitAndLoss){

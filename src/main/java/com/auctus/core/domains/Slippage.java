@@ -28,13 +28,13 @@ public class Slippage extends Costs {
         switch (this.costType) {
             case PERCENT:
                 if (order.getVolume().isPositive()){
-                    return price.plus(price.multipliedBy(
+                    return price.multipliedBy(
                             this.value.plus(NumUtil.getNum(1))
-                    ));
+                    );
                 }else {
-                    return price.minus(price.multipliedBy(
+                    return price.multipliedBy(
                             NumUtil.getNum(1).minus(this.value)
-                    ));
+                    );
                 }
             case ABSOLUTE:
                 if (order.getVolume().isPositive()){

@@ -5,14 +5,22 @@ import com.auctus.core.domains.enums.OrderType;
 import com.auctus.core.domains.enums.PeriodicCostInterval;
 import com.auctus.core.exceptions.SimulatorException;
 import com.auctus.core.utils.NumUtil;
+import com.auctus.core.utils.OrderUtil;
 import lombok.extern.slf4j.Slf4j;
+import org.knowm.xchart.*;
+import org.knowm.xchart.style.Styler;
+import org.knowm.xchart.style.colors.XChartSeriesColors;
+import org.knowm.xchart.style.lines.SeriesLines;
+import org.knowm.xchart.style.markers.Marker;
+import org.knowm.xchart.style.markers.SeriesMarkers;
+import org.knowm.xchart.style.theme.Theme;
 import org.ta4j.core.Bar;
 import org.ta4j.core.BarSeries;
 import org.ta4j.core.num.Num;
 
+import java.io.IOException;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 
 @Slf4j
@@ -34,20 +42,26 @@ public class Simulator<T extends AbstractTradingSystem> {
 
     public void startSimulation() {
         while (tradingSystem.getBarSeriesProvider().tickForward()) {
-            this.simulateTick();
-            System.out.println("QQQ");
+            this.processTick();
         }
         log.info("Simulation Ended : " + this.tradingSystem.getSymbol());
         log.info("Total Bars Simulated : " + this.tradingSystem.getBarSeriesProvider().getBaseBarSeries().getBarCount());
         log.info("Ending Balance : " + this.tradingSystem.getBalance());
-        log.info("Starting Balance : " + this.tradingSystem.startingBalance());
+        log.info("Starting Balance : " + this.tradingSystem.getStartingBalance());
+        log.info("Total trades taken : " + this.tradeHistory.size());
+        for (TradeLog tradeLog : tradeHistory) {
+            System.out.println(tradeLog);
+        }
+        log.info("Total number of balance snapshots : " + balanceSnapshots.size() );
+        log.info("Maximum drawdown : " + getMaximumDrawDown() + "%");
+        log.info("Profit factor is : " + getProfitFactor());
     }
 
-    private void simulateTick() {
-        processTick();
-        analyzeOrders(tradingSystem.getActiveOrders());
+    private void processTick() {
+        this.processOrders();
         this.fundingRateFees();
         this.createSnapShotOfBalance();
+        this.checkLiquidation();
     }
 
     private void fundingRateFees() {
@@ -97,147 +111,224 @@ public class Simulator<T extends AbstractTradingSystem> {
         balanceSnapshots.add(balanceSnapshot);
     }
 
-
-    private void analyzeOrder(Order order) {
-        if (order == null || order.getVolume().isZero()) return;
-
-        if (order.isReduceOnly()) {
-            closePositionOrderAnalyze(order);
-        } else {
-            openPositionOrderAnalyze(order);
-        }
-
-    }
-
     private void analyzeOrders(List<Order> orders) {
-        if (tradingSystem.getRunningPosition().isLong()){
-            orders.sort(Comparator.comparing(Order::isReduceOnly).reversed());
-            orders.sort(Comparator.comparing(Order::getOrderType));
-            orders.sort(Comparator.comparing(Order::getPrice));
-        }else if (tradingSystem.getRunningPosition().isShort()){
-            orders.sort(Comparator.comparing(Order::isReduceOnly).reversed());
-            orders.sort(Comparator.comparing(Order::getOrderType));
-            orders.sort(Comparator.comparing(Order::getPrice).reversed());
-        }
+        Num currentClose = tradingSystem.getBarSeriesProvider().getBaseBarSeries().getLastBar().getClosePrice();
+        List<Order> stopMarketOrders = OrderUtil.getSelectedOrders(orders, OrderType.STOP_MARKET,currentClose);
+        List<Order> limitOrders = OrderUtil.getSelectedOrders(orders,OrderType.LIMIT,currentClose);
+
         for (Order order : orders) {
             log.debug("Debugging orders order : " + order.getOrderType());
             log.debug("Debugging orders order : " + order.isReduceOnly());
             log.debug("--------------");
-            this.analyzeOrder(order);
         }
+
+        stopMarketOrders.forEach(this::processOrder);
+        limitOrders.forEach(this::processOrder);
+        tradingSystem.onBuyCondition();
+        tradingSystem.onSellCondition();
+        if (tradingSystem.getRunningPosition().isLong()){
+            tradingSystem.onExitBuyCondition();
+        }
+        if (tradingSystem.getRunningPosition().isShort()){
+            tradingSystem.onExitSellCondition();
+        }
+        List<Order> marketOrders = OrderUtil.getSelectedOrders(orders,OrderType.MARKET,currentClose);
+        marketOrders.forEach(this::processOrder);
     }
 
-    private void processTick() {
+    private void processOrders() {
         List<Order> activeOrders = tradingSystem.getActiveOrders();
         analyzeOrders(activeOrders);
     }
 
-    private void openPositionOrderAnalyze(Order order) {
-        Num orderVolume = order.getVolume();
-        Num orderPrice = order.getPrice();
-        Bar lastCandle = this.tradingSystem.getBarSeriesProvider().getBaseBarSeries().getLastBar();
-        Num executedPrice = lastCandle.getClosePrice();
-        Position position = tradingSystem.getRunningPosition();
-        switch (order.getOrderType()){
-            case MARKET:{
-                executedPrice = lastCandle.getClosePrice();
-                executedPrice = slippage.getSlippedPrice(executedPrice, order);
-                tradingSystem.reduceBalance(commission.getCostOfCommission(lastCandle.getClosePrice(), order));
-                break;
-            }
-            case LIMIT:{
-                executedPrice = orderPrice;
-                if (orderVolume.isPositive()) {
-                    if (lastCandle.getLowPrice().isGreaterThan(orderPrice)) return;
-                } else {
-                    if (lastCandle.getHighPrice().isLessThan(orderPrice)) return;
-                }
-                tradingSystem.reduceBalance(commission.getCostOfCommission(orderPrice, order));
-                break;
-            }
-        }
-        TradeLog tradeLog = TradeLog.createLog(tradingSystem.getSymbol(), orderVolume, executedPrice, lastCandle.getEndTime());
-        tradeHistory.add(tradeLog);
-
-        position.setSize(position.getSize().plus(orderVolume));
-        tradingSystem.updatePosition(position);
-    }
-
-    private void closePositionOrderAnalyze(Order order) {
+    private void processOrder(Order order) {
+        if (order == null || order.getVolume().isZero()) return;
         Num orderVolume = order.getVolume();
         Bar lastCandle = this.tradingSystem.getBarSeriesProvider().getBaseBarSeries().getLastBar();
         Position position = this.tradingSystem.getRunningPosition();
-        Num executedPrice = lastCandle.getClosePrice();
-        Num newNetSize = position.getSize();
+        Num executedPrice;
+        Num newNetSize;
 
         switch (order.getOrderType()) {
-            case LIMIT:
+            case LIMIT:{
                 Num orderPrice = order.getPrice();
                 executedPrice = orderPrice;
                 if (orderVolume.isPositive()) {
                     //closing short position
                     if (lastCandle.getLowPrice().isGreaterThan(orderPrice)) return;
-                    if (position.getSize().isNegative()) {
-                        newNetSize = position.getSize().plus(orderVolume).min(NumUtil.getNum(0));
-                        tradingSystem.reduceBalance(commission.getCostOfCommission(orderPrice, order));
-                    } else {
-                        log.error("Something has gone wrong... Reduce only order on wrong side of the position?");
-                        tradingSystem.clearOrder(order);
-                        return;
+                    newNetSize = position.getSize().plus(orderVolume);
+                    if(order.isReduceOnly()){
+                        newNetSize = newNetSize.min(NumUtil.getNum(0));
                     }
+                    tradingSystem.reduceBalance(commission.getCostOfCommission(orderPrice, order));
                 } else {
                     //closing long position
                     if (lastCandle.getHighPrice().isLessThan(orderPrice)) return;
-                    if (position.getSize().isPositive()) {
-                        newNetSize = position.getSize().plus(orderVolume).max(NumUtil.getNum(0));
-                        tradingSystem.reduceBalance(commission.getCostOfCommission(orderPrice, order));
-                    } else {
-                        log.error("Something has gone wrong... Reduce only order on wrong side of the position?");
-                        tradingSystem.clearOrder(order);
-                        return;
+                    newNetSize = position.getSize().plus(orderVolume);
+                    if(order.isReduceOnly()){
+                        newNetSize = newNetSize.max(NumUtil.getNum(0));
                     }
+                    tradingSystem.reduceBalance(commission.getCostOfCommission(orderPrice, order));
                 }
                 break;
-            case MARKET:
-                executedPrice = lastCandle.getClosePrice();
-                executedPrice = slippage.getSlippedPrice(executedPrice, order);
+            }
+            case MARKET:{
+                executedPrice = slippage.getSlippedPrice(lastCandle.getClosePrice(), order);
                 if (orderVolume.isPositive()) {
-                    //closing short position
-                    if (position.getSize().isNegative()) {
-                        newNetSize = position.getSize().plus(orderVolume).min(NumUtil.getNum(0));
-                        tradingSystem.reduceBalance(commission.getCostOfCommission(lastCandle.getClosePrice(), order));
-                    } else {
-                        log.error("Something has gone wrong... Reduce only order on wrong side of the position?");
-                        tradingSystem.clearOrder(order);
-                        return;
+                    newNetSize = position.getSize().plus(orderVolume);
+                    if(order.isReduceOnly()){
+                        newNetSize = newNetSize.min(NumUtil.getNum(0));
                     }
+                    tradingSystem.reduceBalance(commission.getCostOfCommission(executedPrice, order));
                 } else {
-                    //closing long position
-                    if (position.getSize().isPositive()) {
-                        newNetSize = position.getSize().plus(orderVolume).max(NumUtil.getNum(0));
-                        tradingSystem.reduceBalance(commission.getCostOfCommission(lastCandle.getClosePrice(), order));
-                    } else {
-                        log.error("Something has gone wrong... Reduce only order on wrong side of the position?");
-                        tradingSystem.clearOrder(order);
-                        return;
+                    newNetSize = position.getSize().plus(orderVolume);
+                    if(order.isReduceOnly()){
+                        newNetSize = newNetSize.max(NumUtil.getNum(0));
                     }
+                    tradingSystem.reduceBalance(commission.getCostOfCommission(executedPrice, order));
                 }
                 break;
+            }
             default:
-                return;
+
+            case STOP_MARKET:{
+                if (orderVolume.isPositive()){
+                    //closing short position
+                    if (lastCandle.getHighPrice().isGreaterThan(order.getPrice()) && lastCandle.getOpenPrice().isLessThan(order.getPrice())){
+                        executedPrice = slippage.getSlippedPrice(order.getPrice(),order);
+                    }else if (lastCandle.getHighPrice().isGreaterThan(order.getPrice()) && lastCandle.getOpenPrice().isGreaterThan(order.getPrice())){
+                        executedPrice = slippage.getSlippedPrice(lastCandle.getOpenPrice(),order);
+                    }else {
+                        return;
+                    }
+                    newNetSize = position.getSize().plus(orderVolume);
+                    if(order.isReduceOnly()){
+                        newNetSize = newNetSize.min(NumUtil.getNum(0));
+                    }
+                    tradingSystem.reduceBalance(commission.getCostOfCommission(executedPrice, order));
+                }else {
+                    //closing long position
+                    if (lastCandle.getHighPrice().isGreaterThan(order.getPrice()) && lastCandle.getOpenPrice().isLessThan(order.getPrice())){
+                        executedPrice = slippage.getSlippedPrice(order.getPrice(),order);
+                    }else if (lastCandle.getHighPrice().isGreaterThan(order.getPrice()) && lastCandle.getOpenPrice().isGreaterThan(order.getPrice())){
+                        executedPrice = slippage.getSlippedPrice(lastCandle.getOpenPrice(),order);
+                    }else {
+                        return;
+                    }
+                    newNetSize = position.getSize().plus(orderVolume);
+                    if(order.isReduceOnly()){
+                        newNetSize = newNetSize.max(NumUtil.getNum(0));
+                    }
+                    tradingSystem.reduceBalance(commission.getCostOfCommission(executedPrice, order));
+                }
+                break;
+            }
         }
 
         Num deltaPositionSize = newNetSize.minus(position.getSize());
 
-        Num realizedProfitAndLoss = deltaPositionSize.multipliedBy(executedPrice);
-        tradingSystem.addBalance(realizedProfitAndLoss);
+
+        if (position.getSize().abs().isGreaterThan(newNetSize.abs())){
+            //this means that position size was reduced
+            Num realizedProfitAndLoss = deltaPositionSize.multipliedBy(position.getAverageEntryPrice().minus(executedPrice));
+            System.out.println(realizedProfitAndLoss);
+            tradingSystem.addBalance(realizedProfitAndLoss);
+        }
 
         TradeLog tradeLog = TradeLog.createLog(tradingSystem.getSymbol(), deltaPositionSize, executedPrice, lastCandle.getEndTime());
         tradeHistory.add(tradeLog);
+        tradingSystem.updatePosition(deltaPositionSize,executedPrice);
+        tradingSystem.clearOrder(order);
 
-        position.setSize(newNetSize);
-        tradingSystem.updatePosition(position);
+    }
 
+    public void generateBalanceDiagrams(boolean saveToFile) {
+        List<Number> xData = new ArrayList<>();
+        List<Number> balance = new ArrayList<>();
+        List<Number> equity = new ArrayList<>();
+        for (BalanceSnapshot balanceSnapshot : balanceSnapshots) {
+            balance.add(balanceSnapshot.getBalanceRPNL().doubleValue());
+            equity.add(balanceSnapshot.getBalanceUPNL().doubleValue());
+            xData.add(balance.size());
+        }
+        XYChart balanceAndEquityChart = new XYChartBuilder().xAxisTitle("Bar")
+                .yAxisTitle("Balance")
+                .width(1920)
+                .height(1080).build();
+        balanceAndEquityChart.getStyler().setDefaultSeriesRenderStyle(XYSeries.XYSeriesRenderStyle.Line);
+        XYSeries balanceSeries = balanceAndEquityChart.addSeries("Balance",xData,balance);
+        XYSeries equitySeries = balanceAndEquityChart.addSeries("Equity",xData,equity);
+        balanceSeries.setSmooth(true);
+        balanceSeries.setLineStyle(SeriesLines.SOLID);
+        balanceSeries.setLineColor(XChartSeriesColors.BLACK);
+        balanceSeries.setMarkerColor(XChartSeriesColors.BLACK);
+        balanceSeries.setFillColor(XChartSeriesColors.BLACK);
+        balanceSeries.setMarker(SeriesMarkers.NONE);
+
+        equitySeries.setSmooth(true);
+        equitySeries.setLineStyle(SeriesLines.SOLID);
+        equitySeries.setLineColor(XChartSeriesColors.YELLOW);
+        equitySeries.setMarkerColor(XChartSeriesColors.YELLOW);
+        equitySeries.setFillColor(XChartSeriesColors.YELLOW);
+        equitySeries.setMarker(SeriesMarkers.NONE);
+
+        balanceAndEquityChart.getStyler().setCursorEnabled(true);
+
+
+        new SwingWrapper(balanceAndEquityChart).displayChart();
+
+        if (saveToFile){
+            try {
+                BitmapEncoder.saveBitmapWithDPI(balanceAndEquityChart, "./Sample_Chart", BitmapEncoder.BitmapFormat.PNG,300);
+            } catch (IOException e) {
+                log.error("Error in saving diagrams files..." + e);
+            }
+        }
+
+    }
+
+    private Num getMaximumDrawDown() {
+        Num maximumDrawDown = NumUtil.getNum(0);
+        Num maximumBalance = NumUtil.getNum(tradingSystem.getStartingBalance());
+        Num minimumBalance = NumUtil.getNum(tradingSystem.getStartingBalance());
+        for (BalanceSnapshot snapshot : balanceSnapshots) {
+            Num balanceRealized = snapshot.getBalanceRPNL();
+            Num balanceUnrealized = snapshot.getBalanceUPNL();
+            if (balanceRealized.isGreaterThan(maximumBalance) || balanceUnrealized.isGreaterThan(maximumBalance)) {
+                maximumBalance = balanceRealized.max(balanceUnrealized);
+                minimumBalance = maximumBalance;
+            }
+
+            if (balanceRealized.isLessThan(minimumBalance) || balanceUnrealized.isLessThan(minimumBalance)) {
+                minimumBalance = balanceRealized.min(balanceUnrealized);
+            }
+            maximumDrawDown = maximumDrawDown.max(NumUtil.getNum(1).minus(minimumBalance.dividedBy(maximumBalance)));
+        }
+        return maximumDrawDown.multipliedBy(NumUtil.getNum(100));
+    }
+
+    private Num getProfitFactor(){
+        Num balanceLost = NumUtil.getNum(0);
+        Num balanceGained = NumUtil.getNum(0);
+        for (int index=1;index<balanceSnapshots.size();index++){
+            BalanceSnapshot previousSnapshot = balanceSnapshots.get(index-1);
+            BalanceSnapshot currentSnapshot =balanceSnapshots.get(index);
+            if (currentSnapshot.getBalanceRPNL().minus(previousSnapshot.getBalanceRPNL()).isPositive()){
+                balanceGained = balanceGained.plus(currentSnapshot.getBalanceRPNL().minus(previousSnapshot.getBalanceRPNL()));
+            }else if (currentSnapshot.getBalanceRPNL().minus(previousSnapshot.getBalanceRPNL()).isNegative()){
+                balanceLost =  balanceLost.plus(currentSnapshot.getBalanceRPNL().minus(previousSnapshot.getBalanceRPNL()));
+            }
+        }
+        return balanceGained.dividedBy(balanceLost.abs());
+    }
+
+    private void checkLiquidation() {
+        Bar lastBar = tradingSystem.getBarSeriesProvider().getBaseBarSeries().getLastBar();
+        if (tradingSystem.getRunningPosition().getUnrealizedProfitAndLoss(lastBar.getClosePrice()).plus(tradingSystem.getBalance()).isNegativeOrZero()) {
+            System.out.println(tradingSystem.getRunningPosition().getUnrealizedProfitAndLoss(lastBar.getClosePrice()));
+            System.out.println((tradingSystem.getBalance()));
+            throw new SimulatorException("Liquidated");
+        }
     }
 
 }

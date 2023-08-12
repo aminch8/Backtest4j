@@ -1,15 +1,13 @@
 package com.auctus.core.domains;
 
 import com.auctus.core.utils.NumUtil;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.ta4j.core.num.Num;
 
 import java.time.ZonedDateTime;
 
 @Getter
+@ToString
 public class BalanceSnapshot {
     private ZonedDateTime time;
     private Num balanceUPNL= NumUtil.getNum(0);

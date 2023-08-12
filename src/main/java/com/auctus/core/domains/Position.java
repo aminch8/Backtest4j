@@ -14,8 +14,8 @@ public class Position {
     private Num size= NumUtil.getNum(0);
     private Num averageEntryPrice=NumUtil.getNum(0);
 
-    public boolean isNotEmpty(){
-        return !size.isZero();
+    public boolean isEmpty(){
+        return size.isZero();
     }
     public boolean isShort(){ return size.isNegative();}
     public boolean isLong(){ return size.isPositive();}

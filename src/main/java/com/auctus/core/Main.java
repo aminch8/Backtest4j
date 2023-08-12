@@ -19,5 +19,6 @@ public class Main {
         BTCUSDTStrategy btcusdtStrategy = new BTCUSDTStrategy(barSeriesProvider);
         Simulator<BTCUSDTStrategy> simulator = new Simulator<>(btcusdtStrategy);
         simulator.startSimulation();
+        simulator.generateBalanceDiagrams(true);
     }
 }

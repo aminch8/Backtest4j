@@ -82,4 +82,40 @@ public class Order {
         return marketOrder;
     }
 
+    public static Order ofStopMarketOutShort(Num volume,Num price){
+        Order marketOrder = new Order();
+        marketOrder.setVolume(volume.abs().multipliedBy(NumUtil.getNum(1)));
+        marketOrder.setOrderType(OrderType.STOP_MARKET);
+        marketOrder.setReduceOnly(true);
+        marketOrder.setPrice(price);
+        return marketOrder;
+    }
+
+    public static Order ofStopMarketOutLong(Num volume,Num price){
+        Order marketOrder = new Order();
+        marketOrder.setVolume(volume.abs().multipliedBy(NumUtil.getNum(-1)));
+        marketOrder.setOrderType(OrderType.STOP_MARKET);
+        marketOrder.setReduceOnly(true);
+        marketOrder.setPrice(price);
+        return marketOrder;
+    }
+
+    public static Order ofStopMarketInShort(Num volume,Num price){
+        Order marketOrder = new Order();
+        marketOrder.setVolume(volume.abs().multipliedBy(NumUtil.getNum(-1)));
+        marketOrder.setOrderType(OrderType.STOP_MARKET);
+        marketOrder.setReduceOnly(false);
+        marketOrder.setPrice(price);
+        return marketOrder;
+    }
+
+    public static Order ofStopMarketInLong(Num volume,Num price){
+        Order marketOrder = new Order();
+        marketOrder.setVolume(volume.abs().multipliedBy(NumUtil.getNum(1)));
+        marketOrder.setOrderType(OrderType.STOP_MARKET);
+        marketOrder.setReduceOnly(false);
+        marketOrder.setPrice(price);
+        return marketOrder;
+    }
+
 }

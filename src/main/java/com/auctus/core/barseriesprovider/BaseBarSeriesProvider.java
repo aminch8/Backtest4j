@@ -308,8 +308,7 @@ public class BaseBarSeriesProvider {
     private void updateAllBarSeries(){
         updateBaseBarSeries();
         int indexOfTimeFrame = this.baseTimeFrame.getIndex();
-        List<TimeFrame> timeFrames = Arrays.stream(TimeFrame.values()).collect(Collectors.toList());
-        timeFrames.sort(Comparator.reverseOrder());
+        List<TimeFrame> timeFrames = Arrays.stream(TimeFrame.values()).sorted(Comparator.naturalOrder()).collect(Collectors.toList());
         for (int i=indexOfTimeFrame+1;i<TimeFrame.values().length;i++){
             TimeFrame selectedTimeFrame = timeFrames.get(i);
             propagateBarSeriesByTick(selectedTimeFrame);
