@@ -1,6 +1,7 @@
 package com.auctus.core.simulator;
 
 import com.auctus.core.domains.BalanceSnapshot;
+import com.auctus.core.domains.TradeLog;
 import com.auctus.core.exceptions.SimulatorException;
 import com.auctus.core.utils.NumUtil;
 import com.auctus.core.utils.ZDTUtil;
@@ -15,6 +16,7 @@ import java.io.IOException;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 public class SimulationAnalyzer {
@@ -25,23 +27,23 @@ public class SimulationAnalyzer {
 
     public SimulationAnalyzer(Simulator<? extends AbstractTradingSystem> simulator) {
         this.simulator = simulator;
-        if (!simulator.isSimulationComplete()){
+        if (!simulator.isSimulationComplete()) {
             throw new SimulatorException("Simulator needs to be completed before analyzing...");
         }
     }
 
-    private SimulationAnalyzer(){}
+    private SimulationAnalyzer() {
+    }
 
 
-
-    public void generateBalanceDiagrams(boolean saveToFile,boolean showBuyAndHold) {
+    public void generateBalanceDiagrams(boolean saveToFile, boolean showBuyAndHold) {
         List<Number> xData = new ArrayList<>();
         List<Number> balance = new ArrayList<>();
         List<Number> equity = new ArrayList<>();
         List<Number> buyAndHold = new ArrayList<>();
         Num openPriceOfSimluation = simulator.getBarSeriesProvider().getBaseBarSeries().getFirstBar().getOpenPrice();
         int indexOfBuyAndHold = 1;
-        for (BalanceSnapshot balanceSnapshot :simulator.getBalanceSnapshots()) {
+        for (BalanceSnapshot balanceSnapshot : simulator.getBalanceSnapshots()) {
             balance.add(balanceSnapshot.getBalanceRPNL().doubleValue());
             equity.add(balanceSnapshot.getBalanceUPNL().doubleValue());
             Num latestPrice = simulator.getBarSeriesProvider().getBaseBarSeries().getBar(indexOfBuyAndHold).getClosePrice();
@@ -56,8 +58,8 @@ public class SimulationAnalyzer {
                 .width(1920)
                 .height(1080).build();
         balanceAndEquityChart.getStyler().setDefaultSeriesRenderStyle(XYSeries.XYSeriesRenderStyle.Line);
-        XYSeries balanceSeries = balanceAndEquityChart.addSeries("Balance",xData,balance);
-        XYSeries equitySeries = balanceAndEquityChart.addSeries("Equity",xData,equity);
+        XYSeries balanceSeries = balanceAndEquityChart.addSeries("Balance", xData, balance);
+        XYSeries equitySeries = balanceAndEquityChart.addSeries("Equity", xData, equity);
 
 
         balanceSeries.setSmooth(true);
@@ -74,8 +76,8 @@ public class SimulationAnalyzer {
         equitySeries.setFillColor(XChartSeriesColors.YELLOW);
         equitySeries.setMarker(SeriesMarkers.NONE);
 
-        if (showBuyAndHold){
-            XYSeries buyAndHoldSeries = balanceAndEquityChart.addSeries("Buy&Hold",xData,buyAndHold);
+        if (showBuyAndHold) {
+            XYSeries buyAndHoldSeries = balanceAndEquityChart.addSeries("Buy&Hold", xData, buyAndHold);
             buyAndHoldSeries.setSmooth(true);
             buyAndHoldSeries.setLineStyle(SeriesLines.SOLID);
             buyAndHoldSeries.setLineColor(XChartSeriesColors.BLACK);
@@ -93,9 +95,32 @@ public class SimulationAnalyzer {
 
         new SwingWrapper(balanceAndEquityChart).isCentered(true).displayChart();
 
-        if (saveToFile){
+        if (saveToFile) {
             try {
-                BitmapEncoder.saveBitmapWithDPI(balanceAndEquityChart, "./Sample_Chart", BitmapEncoder.BitmapFormat.PNG,300);
+                BitmapEncoder.saveBitmapWithDPI(balanceAndEquityChart, "./Sample_Chart", BitmapEncoder.BitmapFormat.PNG, 300);
+            } catch (IOException e) {
+                log.error("Error in saving diagrams files..." + e);
+            }
+        }
+
+    }
+
+    public void generateTradesDistributionDiagram(boolean saveToFile) {
+        CategoryChart categoryChart =
+                new CategoryChartBuilder().xAxisTitle("Trades").yAxisTitle("Profits").height(1080).width(1920).title("Profit Distribution").build();
+        List<Double> profitsByPercentage =
+                simulator.getClosedTrades().stream().map(i -> i.getRealizedProfitAndLoss().dividedBy(i.getBalance()).doubleValue() * 100).collect(Collectors.toList());
+        List<Long> tradeNumber = new ArrayList<>();
+        for (int index = 0; index < profitsByPercentage.size(); index++) {
+            tradeNumber.add(index + 1L);
+        }
+        categoryChart.addSeries("Profits Percentage", tradeNumber, profitsByPercentage);
+
+        new SwingWrapper(categoryChart).isCentered(true).displayChart();
+
+        if (saveToFile) {
+            try {
+                BitmapEncoder.saveBitmapWithDPI(categoryChart, "./Sample_Chart2", BitmapEncoder.BitmapFormat.PNG, 300);
             } catch (IOException e) {
                 log.error("Error in saving diagrams files..." + e);
             }
@@ -123,48 +148,48 @@ public class SimulationAnalyzer {
         return maximumDrawDown.multipliedBy(NumUtil.getNum(100));
     }
 
-    public Num getProfitFactor(){
+    public Num getProfitFactor() {
         Num balanceLost = NumUtil.getNum(0);
         Num balanceGained = NumUtil.getNum(0);
-        for (int index=1;index<simulator.getBalanceSnapshots().size();index++){
-            BalanceSnapshot previousSnapshot = simulator.getBalanceSnapshots().get(index-1);
-            BalanceSnapshot currentSnapshot =simulator.getBalanceSnapshots().get(index);
-            if (currentSnapshot.getBalanceRPNL().minus(previousSnapshot.getBalanceRPNL()).isPositive()){
+        for (int index = 1; index < simulator.getBalanceSnapshots().size(); index++) {
+            BalanceSnapshot previousSnapshot = simulator.getBalanceSnapshots().get(index - 1);
+            BalanceSnapshot currentSnapshot = simulator.getBalanceSnapshots().get(index);
+            if (currentSnapshot.getBalanceRPNL().minus(previousSnapshot.getBalanceRPNL()).isPositive()) {
                 balanceGained = balanceGained.plus(currentSnapshot.getBalanceRPNL().minus(previousSnapshot.getBalanceRPNL()));
-            }else if (currentSnapshot.getBalanceRPNL().minus(previousSnapshot.getBalanceRPNL()).isNegative()){
-                balanceLost =  balanceLost.plus(currentSnapshot.getBalanceRPNL().minus(previousSnapshot.getBalanceRPNL()));
+            } else if (currentSnapshot.getBalanceRPNL().minus(previousSnapshot.getBalanceRPNL()).isNegative()) {
+                balanceLost = balanceLost.plus(currentSnapshot.getBalanceRPNL().minus(previousSnapshot.getBalanceRPNL()));
             }
         }
         return balanceGained.dividedBy(balanceLost.abs());
     }
 
-    public int getTotalNumberOfTransactions(){
+    public int getTotalNumberOfTransactions() {
         return simulator.getTradeHistory().size();
     }
 
-    public long getTotalTrades(){
+    public long getTotalTrades() {
         return simulator.getTradeHistory().stream().filter(i -> i.getRealizedProfitAndLoss() != null).count();
     }
 
-    public long getTotalWinningTrades(){
-        return simulator.getTradeHistory().stream().filter(i->i.getRealizedProfitAndLoss()!=null && i.getRealizedProfitAndLoss().isPositive()).count();
+    public long getTotalWinningTrades() {
+        return simulator.getTradeHistory().stream().filter(i -> i.getRealizedProfitAndLoss() != null && i.getRealizedProfitAndLoss().isPositive()).count();
     }
 
-    public long getTotalLosingTrades(){
-        return simulator.getTradeHistory().stream().filter(i->i.getRealizedProfitAndLoss()!=null && i.getRealizedProfitAndLoss().isNegative()).count();
+    public long getTotalLosingTrades() {
+        return simulator.getTradeHistory().stream().filter(i -> i.getRealizedProfitAndLoss() != null && i.getRealizedProfitAndLoss().isNegative()).count();
     }
 
-    public double getWinningRatePercent(){
-        return (double)getTotalWinningTrades()/(double)getTotalTrades()*100;
+    public double getWinningRatePercent() {
+        return (double) getTotalWinningTrades() / (double) getTotalTrades() * 100;
     }
 
 
     public Num getCAGR() {
         BalanceSnapshot firstSnapshot = simulator.getBalanceSnapshots().get(0);
-        BalanceSnapshot lastSnapshot = simulator.getBalanceSnapshots().get(simulator.getBalanceSnapshots().size()-1);
-        double years = (double) ZDTUtil.zonedDateTimeDifference(firstSnapshot.getTime(),lastSnapshot.getTime(), ChronoUnit.DAYS)/365d;
+        BalanceSnapshot lastSnapshot = simulator.getBalanceSnapshots().get(simulator.getBalanceSnapshots().size() - 1);
+        double years = (double) ZDTUtil.zonedDateTimeDifference(firstSnapshot.getTime(), lastSnapshot.getTime(), ChronoUnit.DAYS) / 365d;
         return lastSnapshot.getBalanceRPNL().dividedBy(firstSnapshot.getBalanceRPNL())
-                .pow(NumUtil.getNum(1d/years)).minus(NumUtil.getNum(1)).multipliedBy(NumUtil.getNum(100));
+                .pow(NumUtil.getNum(1d / years)).minus(NumUtil.getNum(1)).multipliedBy(NumUtil.getNum(100));
 
     }
 
@@ -175,4 +200,11 @@ public class SimulationAnalyzer {
     public Num getReturnPercent() {
         return simulator.getBalance().dividedBy(simulator.getStartingBalance()).minus(NumUtil.getNum(1)).multipliedBy(NumUtil.getNum(100));
     }
+    //todo: Average winning and losing trade and percentage, average trade return and distribution with standard deviation
+
+    //todo: Mont-Carlo simulation
+
+    //todo: Average Drawdown and drawdown distribution
+
+
 }

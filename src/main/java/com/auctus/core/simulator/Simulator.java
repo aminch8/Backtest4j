@@ -241,11 +241,10 @@ public class Simulator<T extends AbstractTradingSystem> {
         if (newNetSize.abs().isLessThan(position.getSize().abs())){
             //this means that position size was reduced
             Num realizedProfitAndLoss = deltaPositionSize.multipliedBy(position.getAverageEntryPrice().minus(executedPrice));
-            System.out.println(realizedProfitAndLoss);
+            tradeLog = TradeLog.createLog(tradingSystem.getSymbol(), deltaPositionSize, executedPrice, lastCandle.getEndTime(),realizedProfitAndLoss,getBalance());
             tradingSystem.addBalance(realizedProfitAndLoss);
-            tradeLog = TradeLog.createLog(tradingSystem.getSymbol(), deltaPositionSize, executedPrice, lastCandle.getEndTime(),realizedProfitAndLoss);
         }else {
-            tradeLog = TradeLog.createLog(tradingSystem.getSymbol(), deltaPositionSize, executedPrice, lastCandle.getEndTime());
+            tradeLog = TradeLog.createLog(tradingSystem.getSymbol(), deltaPositionSize, executedPrice, lastCandle.getEndTime(),getBalance());
         }
 
 
@@ -258,6 +257,10 @@ public class Simulator<T extends AbstractTradingSystem> {
     private void reduceCommission(Num executedPrice, Order order) {
         tradingSystem.reduceBalance(commission.getCostOfCommission(executedPrice, order));
         this.totalCommissions = totalCommissions.plus(commission.getCostOfCommission(executedPrice, order));
+    }
+
+    public List<TradeLog> getClosedTrades(){
+        return tradeHistory.stream().filter(i->i.getRealizedProfitAndLoss()!=null).collect(Collectors.toList());
     }
 
 

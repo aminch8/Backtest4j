@@ -24,6 +24,7 @@ public class Main {
         simulator.startSimulation();
         SimulationAnalyzer simulationAnalyzer = new SimulationAnalyzer(simulator);
         simulationAnalyzer.generateBalanceDiagrams(true,true);
+        simulationAnalyzer.generateTradesDistributionDiagram(true,true);
         System.out.println("Winning rate percent : " + simulationAnalyzer.getWinningRatePercent());
     }
 }
