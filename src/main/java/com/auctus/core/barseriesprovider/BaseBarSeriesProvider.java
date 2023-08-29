@@ -11,6 +11,7 @@ import org.ta4j.core.num.Num;
 
 import java.time.DayOfWeek;
 import java.time.Duration;
+import java.time.Month;
 import java.time.ZonedDateTime;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -41,11 +42,21 @@ class BaseBarSeriesProvider {
     private List<TimeFrame> allowedTimeFrames = Arrays.stream(TimeFrame.values()).collect(Collectors.toList());
 
     BaseBarSeriesProvider(BarSeries barSeries, TimeFrame timeFrame, String symbol) {
+        barSeries = initializeBarSeries(barSeries);
         this.baseTimeFrame = timeFrame;
         this.maximumBars = barSeries.getBarCount();
         allowedTimeFrames = allowedTimeFrames.subList(timeFrame.getIndex(),allowedTimeFrames.size());
         completeBaseBarSeriesHolder = barSeries;
         this.symbol=symbol;
+    }
+
+    private BarSeries initializeBarSeries(BarSeries barSeries) {
+        for (int index = 1;index<barSeries.getBarCount();index++){
+            if (barSeries.getBar(index).getBeginTime().getDayOfWeek()!=barSeries.getBar(index-1).getBeginTime().getDayOfWeek()){
+                return barSeries.getSubSeries(index,barSeries.getBarCount());
+            }
+        }
+        return barSeries;
     }
 
     public boolean tickForward(){
@@ -128,12 +139,12 @@ class BaseBarSeriesProvider {
       switch (timeFrame){
           case M5:{
               if (
-                      ZDTUtil.zonedDateTimeDifferenceInMinutes(previousOpenTime,openTime)>=5
+                      timeFrame.isNewBarTime(timeFrame,previousBar,bar)
               )
               {
                   fiveMinuteBarSeries.addBar(
                           Duration.ofMinutes(5),
-                          closeTime.plusMinutes(5),
+                          openTime.plusMinutes(5),
                           bar.getOpenPrice(),
                           bar.getHighPrice(),
                           bar.getLowPrice(),
@@ -149,10 +160,10 @@ class BaseBarSeriesProvider {
           }
           break;
           case M15:{
-              if (ZDTUtil.zonedDateTimeDifferenceInMinutes(previousOpenTime,openTime)>=15){
+              if ( timeFrame.isNewBarTime(timeFrame,previousBar,bar) ){
                   fifteenMinutesBarSeries.addBar(
                           Duration.ofMinutes(15),
-                          closeTime.plusMinutes(15),
+                          openTime.plusMinutes(15),
                           bar.getOpenPrice(),
                           bar.getHighPrice(),
                           bar.getLowPrice(),
@@ -168,10 +179,10 @@ class BaseBarSeriesProvider {
           }
           break;
           case M30:{
-              if (ZDTUtil.zonedDateTimeDifferenceInMinutes(previousOpenTime,openTime)>=30){
+              if ( timeFrame.isNewBarTime(timeFrame,previousBar,bar) ){
                   thirtyMinutesBarSeries.addBar(
                           Duration.ofMinutes(30),
-                          closeTime.plusMinutes(30),
+                          openTime.plusMinutes(30),
                           bar.getOpenPrice(),
                           bar.getHighPrice(),
                           bar.getLowPrice(),
@@ -187,10 +198,10 @@ class BaseBarSeriesProvider {
           }
           break;
           case H1:{
-              if (ZDTUtil.zonedDateTimeDifferenceInMinutes(previousOpenTime,openTime)>=60){
+              if ( timeFrame.isNewBarTime(timeFrame,previousBar,bar) ){
                   oneHourBarSeries.addBar(
                           Duration.ofMinutes(60),
-                          closeTime.plusMinutes(60),
+                          openTime.plusMinutes(60),
                           bar.getOpenPrice(),
                           bar.getHighPrice(),
                           bar.getLowPrice(),
@@ -206,10 +217,10 @@ class BaseBarSeriesProvider {
           }
           break;
           case H2:{
-              if (ZDTUtil.zonedDateTimeDifferenceInMinutes(previousOpenTime,openTime)>=120 ){
+              if (  timeFrame.isNewBarTime(timeFrame,previousBar,bar) ){
                   twoHourBarSeries.addBar(
                           Duration.ofHours(2),
-                          closeTime.plusHours(2),
+                          openTime.plusHours(2),
                           bar.getOpenPrice(),
                           bar.getHighPrice(),
                           bar.getLowPrice(),
@@ -225,10 +236,10 @@ class BaseBarSeriesProvider {
           }
           break;
           case H4:{
-              if ( ZDTUtil.zonedDateTimeDifferenceInMinutes(previousOpenTime,openTime)>=240 ){
+              if (  timeFrame.isNewBarTime(timeFrame,previousBar,bar) ){
                   fourHourBarSeries.addBar(
                           Duration.ofHours(4),
-                          closeTime.plusHours(4),
+                          openTime.plusHours(4),
                           bar.getOpenPrice(),
                           bar.getHighPrice(),
                           bar.getLowPrice(),
@@ -244,10 +255,10 @@ class BaseBarSeriesProvider {
           }
           break;
           case D1:{
-              if ( openTime.getDayOfWeek().getValue()!=previousOpenTime.getDayOfWeek().getValue() ){
+              if (  timeFrame.isNewBarTime(timeFrame,previousBar,bar) ){
                   dailyBarSeries.addBar(
                           Duration.ofDays(1),
-                          closeTime.plusDays(1),
+                          openTime.plusDays(1),
                           bar.getOpenPrice(),
                           bar.getHighPrice(),
                           bar.getLowPrice(),
@@ -263,10 +274,10 @@ class BaseBarSeriesProvider {
           }
           break;
           case W1:{
-              if ( openTime.getDayOfWeek()==DayOfWeek.MONDAY && previousOpenTime.getDayOfWeek()!=DayOfWeek.MONDAY ){
+              if (  timeFrame.isNewBarTime(timeFrame,previousBar,bar) ){
                   weeklyBarSeries.addBar(
                           Duration.ofDays(7),
-                          closeTime.plusWeeks(1),
+                          openTime.plusWeeks(1),
                           bar.getOpenPrice(),
                           bar.getHighPrice(),
                           bar.getLowPrice(),
@@ -282,10 +293,10 @@ class BaseBarSeriesProvider {
           }
           break;
           case Mo:{
-              if (openTime.getDayOfMonth() == 1 && previousOpenTime.getDayOfMonth() != 1 ){
+              if ( timeFrame.isNewBarTime(timeFrame,previousBar,bar) ){
                   monthlyBarSeries.addBar(
-                          Duration.ofDays(7),
-                          closeTime.plusWeeks(1),
+                          Duration.ofDays(28),
+                          openTime.plusWeeks(4),
                           bar.getOpenPrice(),
                           bar.getHighPrice(),
                           bar.getLowPrice(),
