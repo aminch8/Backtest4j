@@ -1,8 +1,6 @@
 .idea/**
 /target/**
 target/**
-src/main/java/com/auctus/core/Main.java
-src/main/java/com/auctus/services/**
-src/main/java/com/auctus/services
-src/main/java/com/auctus/strategies
-src/main/java/com/auctus/strategies/**
+services
+strategies
+Main.java
