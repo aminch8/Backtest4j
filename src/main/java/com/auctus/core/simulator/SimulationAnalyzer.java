@@ -1,7 +1,6 @@
 package com.auctus.core.simulator;
 
 import com.auctus.core.domains.BalanceSnapshot;
-import com.auctus.core.domains.TradeLog;
 import com.auctus.core.exceptions.SimulatorException;
 import com.auctus.core.utils.NumUtil;
 import com.auctus.core.utils.ZDTUtil;
@@ -109,7 +108,7 @@ public class SimulationAnalyzer {
         CategoryChart categoryChart =
                 new CategoryChartBuilder().xAxisTitle("Trades").yAxisTitle("Profits").height(1080).width(1920).title("Profit Distribution").build();
         List<Double> profitsByPercentage =
-                simulator.getClosedTrades().stream().map(i -> i.getRealizedProfitAndLoss().dividedBy(i.getBalance()).doubleValue() * 100).collect(Collectors.toList());
+                simulator.getClosedTrades().stream().map(i -> i.getRealizedProfitAndLoss().dividedBy(i.getBalance().minus(i.getRealizedProfitAndLoss())).doubleValue() * 100).collect(Collectors.toList());
         List<Long> tradeNumber = new ArrayList<>();
         for (int index = 0; index < profitsByPercentage.size(); index++) {
             tradeNumber.add(index + 1L);
@@ -134,15 +133,14 @@ public class SimulationAnalyzer {
         Num minimumBalance = simulator.getStartingBalance();
         for (BalanceSnapshot snapshot : simulator.getBalanceSnapshots()) {
             Num balanceRealized = snapshot.getBalanceRPNL();
-            Num balanceUnrealized = snapshot.getBalanceUPNL();
-            if (balanceRealized.isGreaterThan(maximumBalance) || balanceUnrealized.isGreaterThan(maximumBalance)) {
-                maximumBalance = balanceRealized.max(balanceUnrealized);
+            if (balanceRealized.isGreaterThan(maximumBalance)) {
+                maximumBalance = balanceRealized;
                 minimumBalance = maximumBalance;
             }
-
-            if (balanceRealized.isLessThan(minimumBalance) || balanceUnrealized.isLessThan(minimumBalance)) {
-                minimumBalance = balanceRealized.min(balanceUnrealized);
+            if (balanceRealized.isLessThan(minimumBalance)) {
+                minimumBalance = balanceRealized;
             }
+
             maximumDrawDown = maximumDrawDown.max(NumUtil.getNum(1).minus(minimumBalance.dividedBy(maximumBalance)));
         }
         return maximumDrawDown.multipliedBy(NumUtil.getNum(100));
@@ -200,11 +198,90 @@ public class SimulationAnalyzer {
     public Num getReturnPercent() {
         return simulator.getBalance().dividedBy(simulator.getStartingBalance()).minus(NumUtil.getNum(1)).multipliedBy(NumUtil.getNum(100));
     }
-    //todo: Average winning and losing trade and percentage, average trade return and distribution with standard deviation
 
-    //todo: Mont-Carlo simulation
+    public Num getAverageWinningTradePercent(){
+        List<Num> tradeReturnsPercent = simulator.getClosedTrades().stream()
+                .filter(i->i.getRealizedProfitAndLoss().isPositive())
+                .map(
+                        i->i.getRealizedProfitAndLoss().dividedBy(i.getBalance().minus(i.getRealizedProfitAndLoss()))
+                ).collect(Collectors.toList());
+        Num averageWinningTradeReturnPercent = NumUtil.getNum(0);
+        for (Num returnPercent : tradeReturnsPercent) {
+            averageWinningTradeReturnPercent = averageWinningTradeReturnPercent.plus(returnPercent);
+        }
+        return averageWinningTradeReturnPercent.dividedBy(NumUtil.getNum(tradeReturnsPercent.size())).multipliedBy(NumUtil.getNum(100));
+    }
 
-    //todo: Average Drawdown and drawdown distribution
+    public Num getAverageLosingTradePercent(){
+        List<Num> tradeReturnsPercent = simulator.getClosedTrades().stream()
+                .filter(i->i.getRealizedProfitAndLoss().isNegative())
+                .map(
+                        i->i.getRealizedProfitAndLoss().dividedBy(i.getBalance().minus(i.getRealizedProfitAndLoss()))
+                ).collect(Collectors.toList());
+        Num averageLosingTradeReturnPercent = NumUtil.getNum(0);
+        for (Num returnPercent : tradeReturnsPercent) {
+            averageLosingTradeReturnPercent = averageLosingTradeReturnPercent.plus(returnPercent);
+        }
+        return averageLosingTradeReturnPercent.dividedBy(NumUtil.getNum(tradeReturnsPercent.size())).multipliedBy(NumUtil.getNum(100));
+    }
+
+    public Num getAverageTradeReturnPercent(){
+        List<Num> tradeReturnsPercent = simulator.getClosedTrades().stream()
+                .map(
+                        i->i.getRealizedProfitAndLoss().dividedBy(i.getBalance().minus(i.getRealizedProfitAndLoss()))
+                ).collect(Collectors.toList());
+        Num averageTradeReturnPercent = NumUtil.getNum(0);
+        for (Num returnPercent : tradeReturnsPercent) {
+            averageTradeReturnPercent = averageTradeReturnPercent.plus(returnPercent);
+        }
+        return averageTradeReturnPercent.dividedBy(NumUtil.getNum(tradeReturnsPercent.size())).multipliedBy(NumUtil.getNum(100));
+    }
+
+    public Num getAverageDrawdown(){
+        Num sumDrawdown = NumUtil.getNum(0);
+        List<Num> drawdowns = this.getListOfDrawdowns();
+        for (Num drawdow : drawdowns) {
+            sumDrawdown = sumDrawdown.plus(drawdow);
+        }
+        return sumDrawdown.dividedBy(NumUtil.getNum(drawdowns.size())).multipliedBy(NumUtil.getNum(100));
+    }
+
+    public List<Num> getListOfDrawdowns(){
+        List<Num> drawdowns = new ArrayList<>();
+        Num maximumBalance = simulator.getStartingBalance();
+        Num minimumBalance = simulator.getStartingBalance();
+        for (BalanceSnapshot snapshot : simulator.getBalanceSnapshots()) {
+            Num balanceRealized = snapshot.getBalanceRPNL();
+            if (balanceRealized.isGreaterThan(maximumBalance)) {
+
+                if (!maximumBalance.isEqual(minimumBalance)){
+                    drawdowns.add(NumUtil.getNum(1).minus(minimumBalance.dividedBy(maximumBalance)));
+                }
+
+                maximumBalance = balanceRealized;
+                minimumBalance = maximumBalance;
+            }
+            if (balanceRealized.isLessThan(minimumBalance)) {
+                minimumBalance = balanceRealized;
+            }
+        }
+        return drawdowns;
+    }
+
+    public Num getDrawdownStandardDeviation(){
+        return NumUtil.getStandardDeviation(getListOfDrawdowns()).multipliedBy(NumUtil.getNum(100));
+    }
+
+    public Num getAverageTradeReturnPercentStandardDeviation(){
+        List<Num> tradeReturnsPercent = simulator.getClosedTrades().stream()
+                .map(
+                        i->i.getRealizedProfitAndLoss().dividedBy(i.getBalance().minus(i.getRealizedProfitAndLoss()))
+                ).collect(Collectors.toList());
+
+        return NumUtil.getStandardDeviation(tradeReturnsPercent).multipliedBy(NumUtil.getNum(100));
+    }
+
+    //todo: Mont-Carlo simulation, this part should be done lastly.
 
 
 }

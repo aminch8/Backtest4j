@@ -25,8 +25,8 @@ public class BarService {
         BarSeries barSeries = new BaseBarSeriesBuilder().build();
         for (Candle candle : candleList) {
             barSeries.addBar(
-                    Duration.ofMinutes(60),
-                    candle.getOpenTime().plusMinutes(60),
+                    Duration.ofMinutes(timeFrame.getDuration().toMinutes()),
+                    candle.getOpenTime().plusMinutes(timeFrame.getDuration().toMinutes()),
                     candle.getOpenPrice(),
                     candle.getHighPrice(),
                     candle.getLowPrice(),

@@ -2,12 +2,14 @@ package com.auctus.core.simulator;
 
 import com.auctus.core.barseriesprovider.BarSeriesProvider;
 import com.auctus.core.domains.*;
+import com.auctus.core.domains.enums.OrderType;
 import com.auctus.core.utils.NumUtil;
 import lombok.Getter;
 import org.ta4j.core.num.Num;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public abstract class AbstractTradingSystem {
 
@@ -21,10 +23,12 @@ public abstract class AbstractTradingSystem {
     public abstract void onSellCondition();
     public abstract void onExitBuyCondition();
     public abstract void onExitSellCondition();
+    public abstract void onEveryCandle();
     public abstract Num getStartingBalance();
     public abstract FundingRate getFundingRate();
     public abstract Commission getCommission();
     public abstract Slippage getSlippage();
+    public abstract Spread getSpread();
 
     @Getter
     private final BarSeriesProvider barSeriesProvider;
@@ -59,17 +63,37 @@ public abstract class AbstractTradingSystem {
         this.orders=new ArrayList<Order>();
     }
 
-    public void updatePosition(Num deltaPositionSize, Num executedPrice){
-        Num newAverageEntryPrice = this.position.getSize().multipliedBy(position.getAverageEntryPrice())
-                .plus(deltaPositionSize.multipliedBy(executedPrice))
-                .dividedBy(deltaPositionSize.plus(position.getSize()));
+    public void clearAllOrders(OrderType orderType){
+        this.orders=this.orders.stream().filter(i->i.getOrderType()!=orderType).collect(Collectors.toList());
+    }
 
-        if (newAverageEntryPrice.isNaN()){
-            this.position.setSize(NumUtil.getNum(0));
-            this.position.setAverageEntryPrice(NumUtil.getNum(0));
-        }else {
+    public void updatePosition(Num deltaPositionSize, Num executedPrice){
+
+        if (this.position.getSize().isPositive() && deltaPositionSize.isPositive()){
+            Num newAverageEntryPrice = this.position.getSize().multipliedBy(position.getAverageEntryPrice())
+                    .plus(deltaPositionSize.multipliedBy(executedPrice))
+                    .dividedBy(deltaPositionSize.plus(position.getSize()));
             this.position.setSize(position.getSize().plus(deltaPositionSize));
             this.position.setAverageEntryPrice(newAverageEntryPrice);
+        }else if (this.position.getSize().isNegative() && deltaPositionSize.isNegative()){
+            Num newAverageEntryPrice = this.position.getSize().multipliedBy(position.getAverageEntryPrice())
+                    .plus(deltaPositionSize.multipliedBy(executedPrice))
+                    .dividedBy(deltaPositionSize.plus(position.getSize()));
+            this.position.setSize(position.getSize().plus(deltaPositionSize));
+            this.position.setAverageEntryPrice(newAverageEntryPrice);
+        }else {
+            if(position.getSize().isZero()){
+                this.position.setAverageEntryPrice(executedPrice);
+            }else {
+                if (position.getSize().plus(deltaPositionSize).multipliedBy(position.getSize()).isNegative()){
+                    this.position.setAverageEntryPrice(executedPrice);
+                }
+            }
+            this.position.setSize(position.getSize().plus(deltaPositionSize));
+        }
+
+        if (position.getSize().abs().isLessThan(NumUtil.getNum(0.000000000000000000000000000001))){
+            position.setSize(NumUtil.getNum(0));
         }
 
     }
@@ -90,6 +114,12 @@ public abstract class AbstractTradingSystem {
     }
     public void clearOrder(Order order){
         this.orders.remove(order);
+    }
+
+    public void clearOrders(Order... orders){
+        for (Order order : orders) {
+            this.clearOrder(order);
+        }
     }
 
 
