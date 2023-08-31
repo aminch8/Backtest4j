@@ -4,3 +4,5 @@ target/**
 services
 strategies
 Main.java
+*.iml
+*.log
