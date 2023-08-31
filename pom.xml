@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.auctus</groupId>
-    <artifactId>backtest-framework</artifactId>
+    <artifactId>backtest4j</artifactId>
     <version>1.0.0</version>
 
     <properties>
