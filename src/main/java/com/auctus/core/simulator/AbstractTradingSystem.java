@@ -5,6 +5,7 @@ import com.auctus.core.domains.*;
 import com.auctus.core.domains.enums.OrderType;
 import com.auctus.core.utils.NumUtil;
 import lombok.Getter;
+import lombok.Setter;
 import org.ta4j.core.num.Num;
 
 import java.util.ArrayList;
@@ -29,6 +30,7 @@ public abstract class AbstractTradingSystem {
     public abstract Commission getCommission();
     public abstract Slippage getSlippage();
     public abstract Spread getSpread();
+    public abstract int getStartIndexBackTest();
 
     @Getter
     private final BarSeriesProvider barSeriesProvider;
@@ -120,6 +122,10 @@ public abstract class AbstractTradingSystem {
         for (Order order : orders) {
             this.clearOrder(order);
         }
+    }
+
+    public List<Order> getOrders(OrderType orderType){
+        return this.orders.stream().filter(i->i.getOrderType()==orderType).collect(Collectors.toList());
     }
 
 

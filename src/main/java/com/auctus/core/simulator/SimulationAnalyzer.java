@@ -281,6 +281,14 @@ public class SimulationAnalyzer {
         return NumUtil.getStandardDeviation(tradeReturnsPercent).multipliedBy(NumUtil.getNum(100));
     }
 
+    public Num getTotalFundingRatesFees(){
+        return this.simulator.getTotalFundingFees();
+    }
+
+    public Num getTotalCommissions(){
+        return this.simulator.getTotalCommissions();
+    }
+
     //todo: Mont-Carlo simulation, this part should be done lastly.
 
 

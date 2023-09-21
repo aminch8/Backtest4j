@@ -82,7 +82,7 @@ public class Simulator<T extends AbstractTradingSystem> {
         Bar lastBar = baseBarSeries.getLastBar();
         ZonedDateTime openTime = lastBar.getBeginTime();
         ZonedDateTime closeTime = lastBar.getEndTime();
-        ZonedDateTime startOfDayOnOpen = openTime.withHour(0).withHour(0).withSecond(0).withNano(0);
+        ZonedDateTime startOfDayOnOpen = openTime.withHour(0).withMinute(0).withSecond(0).withNano(0);
         ZonedDateTime checkPoint = startOfDayOnOpen;
 
         int fundingRatesHappened = 0;
@@ -104,7 +104,7 @@ public class Simulator<T extends AbstractTradingSystem> {
                 }
                 while (checkPoint.isBefore(closeTime)) {
                     checkPoint = checkPoint.plusHours(24);
-                    if (checkPoint.isBefore(closeTime)) {
+                    if (checkPoint.isBefore(closeTime) && openTime.isBefore(checkPoint)) {
                         fundingRatesHappened++;
                     }
                 }
@@ -139,8 +139,10 @@ public class Simulator<T extends AbstractTradingSystem> {
         stopMarketOrders.forEach(this::processOrder);
         limitOrders.forEach(this::processOrder);
         tradingSystem.onEveryCandle();
-        tradingSystem.onBuyCondition();
-        tradingSystem.onSellCondition();
+        if (tradingSystem.getBarSeriesProvider().getBaseBarSeries().getBarCount()>tradingSystem.getStartIndexBackTest()){
+            tradingSystem.onBuyCondition();
+            tradingSystem.onSellCondition();
+        }
         if (tradingSystem.getRunningPosition().isLong()) {
             tradingSystem.onExitBuyCondition();
         }
