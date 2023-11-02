@@ -25,4 +25,16 @@ public class OrderUtil {
         ).collect(Collectors.toList());
     }
 
+    public static Num getAverageStoploss(List<Order> allOrders){
+        List<Order> stopOrders =
+                allOrders.stream().filter(i->i.getOrderType()==OrderType.STOP_MARKET).collect(Collectors.toList());
+        Num averageStop = NumUtil.getNum(0);
+        for (Order stopOrder : stopOrders) {
+            averageStop = averageStop.plus(stopOrder.getPrice());
+        }
+        if (averageStop.isZero()) return averageStop;
+        return averageStop.dividedBy(NumUtil.getNum(stopOrders.size()));
+
+    }
+
 }

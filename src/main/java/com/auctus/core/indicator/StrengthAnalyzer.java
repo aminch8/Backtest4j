@@ -38,6 +38,6 @@ public class StrengthAnalyzer {
                                -(Math.pow(getStrength().doubleValue(),2))
                        )
                )
-        );
+        ).multipliedBy(NumUtil.getNum(2));
     }
 }

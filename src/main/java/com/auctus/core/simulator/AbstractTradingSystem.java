@@ -18,6 +18,7 @@ public abstract class AbstractTradingSystem {
     private List<Order> orders=new ArrayList<Order>();
     private Position position=new Position();
     @Getter
+    @Setter
     private Num balance= getStartingBalance();
 
     public abstract void onBuyCondition();
@@ -94,7 +95,7 @@ public abstract class AbstractTradingSystem {
             this.position.setSize(position.getSize().plus(deltaPositionSize));
         }
 
-        if (position.getSize().abs().isLessThan(NumUtil.getNum(0.000000000000000000000000000001))){
+        if (position.getSize().abs().isLessThan(NumUtil.getNum(0.000000000000000001))){
             position.setSize(NumUtil.getNum(0));
         }
 

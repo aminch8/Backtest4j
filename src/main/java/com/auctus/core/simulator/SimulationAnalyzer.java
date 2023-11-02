@@ -96,7 +96,7 @@ public class SimulationAnalyzer {
 
         if (saveToFile) {
             try {
-                BitmapEncoder.saveBitmapWithDPI(balanceAndEquityChart, "./Sample_Chart", BitmapEncoder.BitmapFormat.PNG, 300);
+                BitmapEncoder.saveBitmapWithDPI(balanceAndEquityChart, "./Balance", BitmapEncoder.BitmapFormat.PNG, 300);
             } catch (IOException e) {
                 log.error("Error in saving diagrams files..." + e);
             }
@@ -119,7 +119,7 @@ public class SimulationAnalyzer {
 
         if (saveToFile) {
             try {
-                BitmapEncoder.saveBitmapWithDPI(categoryChart, "./Sample_Chart2", BitmapEncoder.BitmapFormat.PNG, 300);
+                BitmapEncoder.saveBitmapWithDPI(categoryChart, "./Trades", BitmapEncoder.BitmapFormat.PNG, 300);
             } catch (IOException e) {
                 log.error("Error in saving diagrams files..." + e);
             }
@@ -287,6 +287,39 @@ public class SimulationAnalyzer {
 
     public Num getTotalCommissions(){
         return this.simulator.getTotalCommissions();
+    }
+
+    public Num getTimeInMarket() {
+        List<BalanceSnapshot> balanceSnapshots =
+                this.simulator.getBalanceSnapshots();
+        long count = balanceSnapshots.stream().filter(i -> !i.getBalanceUPNL().isEqual(i.getBalanceRPNL())).count();
+        System.out.println(count);
+        System.out.println(balanceSnapshots.size());
+        return NumUtil.getNum(count).dividedBy(NumUtil.getNum(balanceSnapshots.size())).multipliedBy(NumUtil.getNum(100));
+    }
+
+
+    public void generateDrawdownDistributionDiagram(boolean saveToFile) {
+        CategoryChart categoryChart =
+                new CategoryChartBuilder().xAxisTitle("Drawdowns").yAxisTitle("Percentages").height(1080).width(1920).title("Drawdown Distribution").build();
+        List<Double> profitsByPercentage =
+                getListOfDrawdowns().stream().map(i -> i.multipliedBy(NumUtil.getNum(100)).doubleValue()).collect(Collectors.toList());
+        List<Long> tradeNumber = new ArrayList<>();
+        for (int index = 0; index < profitsByPercentage.size(); index++) {
+            tradeNumber.add(index + 1L);
+        }
+        categoryChart.addSeries("Drawdowns Percentage", tradeNumber, profitsByPercentage);
+
+        new SwingWrapper(categoryChart).isCentered(true).displayChart();
+
+        if (saveToFile) {
+            try {
+                BitmapEncoder.saveBitmapWithDPI(categoryChart, "./Drawdown", BitmapEncoder.BitmapFormat.PNG, 300);
+            } catch (IOException e) {
+                log.error("Error in saving diagrams files..." + e);
+            }
+        }
+
     }
 
     //todo: Mont-Carlo simulation, this part should be done lastly.
