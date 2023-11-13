@@ -367,6 +367,27 @@ class BaseBarSeriesProvider {
         return barSeries.getBar(barSeries.getBarCount()-2).getLowPrice();
     }
 
+    public int indexOfHigherTimeFrame(int selectedIndex,TimeFrame selectedTimeFrame){
+        Bar bar = getBaseBarSeries().getBar(selectedIndex);
+        ZonedDateTime beginTime = bar.getBeginTime();
+        ZonedDateTime endTime = bar.getEndTime();
+        BarSeries barSeries = getBarSeries(selectedTimeFrame);
+
+        for (int i = barSeries.getBarCount()-1;i>0;i--){
+            Bar htfBar = barSeries.getBar(i);
+            if (
+                    !beginTime.isBefore(htfBar.getBeginTime())
+                    &&
+                            !beginTime.isAfter(htfBar.getEndTime())
+                    &&
+                            !endTime.isAfter(htfBar.getEndTime())
+            ){
+                return i;
+            }
+        }
+        throw new IllegalStateException("Bar cannot be found? possible lower time frame access");
+    }
+
     public TimeFrame getBaseTimeFrame() {
         return baseTimeFrame;
     }

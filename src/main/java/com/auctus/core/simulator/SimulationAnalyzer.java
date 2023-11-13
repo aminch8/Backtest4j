@@ -1,20 +1,24 @@
 package com.auctus.core.simulator;
 
 import com.auctus.core.domains.BalanceSnapshot;
+import com.auctus.core.domains.TradeLog;
 import com.auctus.core.exceptions.SimulatorException;
 import com.auctus.core.utils.NumUtil;
+import com.auctus.core.utils.PlotterUtil;
 import com.auctus.core.utils.ZDTUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.knowm.xchart.*;
 import org.knowm.xchart.style.colors.XChartSeriesColors;
 import org.knowm.xchart.style.lines.SeriesLines;
 import org.knowm.xchart.style.markers.SeriesMarkers;
+import org.ta4j.core.BarSeries;
 import org.ta4j.core.num.Num;
 
 import java.io.IOException;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Scanner;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -320,6 +324,25 @@ public class SimulationAnalyzer {
             }
         }
 
+    }
+
+    public void showTrades() {
+        BarSeries barSeries = this.simulator.getBarSeriesProvider().getBaseBarSeries();
+        TradeLog entry = null;
+        TradeLog exit = null;
+        for (TradeLog trade: this.simulator.getAllTrades()) {
+            if (trade.getRealizedProfitAndLoss().isZero()){
+                entry = trade;
+            }else {
+                exit = trade;
+                if (entry!=null){
+                    PlotterUtil.plotOHLC(barSeries,entry,exit);
+                    System.out.println("Press any key to go next trade...");
+                    Scanner sc=new Scanner(System.in);
+                    sc.nextLine();
+                }
+            }
+        }
     }
 
     //todo: Mont-Carlo simulation, this part should be done lastly.

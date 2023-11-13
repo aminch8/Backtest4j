@@ -20,13 +20,14 @@ public class TradeLog {
     private ZonedDateTime date;
     private Num realizedProfitAndLoss;
     private Num balance;
+    private int index;
 
 
-    public static TradeLog createLog(String symbol,Num executedVolume,Num price,ZonedDateTime time,Num currentBalance){
-       return createLog(symbol,executedVolume,price,time,null,currentBalance);
+    public static TradeLog createLog(String symbol,Num executedVolume,Num price,ZonedDateTime time,Num currentBalance,int index){
+       return createLog(symbol,executedVolume,price,time,NumUtil.getNum(0),currentBalance,index);
     }
 
-    public static TradeLog createLog(String symbol,Num executedVolume,Num price,ZonedDateTime time,Num realizedProfitAndLoss,Num currentBalance){
+    public static TradeLog createLog(String symbol,Num executedVolume,Num price,ZonedDateTime time,Num realizedProfitAndLoss,Num currentBalance,int index){
         TradeLog tradeLog = new TradeLog();
         if (executedVolume.isZero()) throw new IllegalStateException("Executed volume zero");
         tradeLog.setSymbol(symbol);
@@ -35,6 +36,7 @@ public class TradeLog {
         tradeLog.setVolume(executedVolume);
         tradeLog.setRealizedProfitAndLoss(realizedProfitAndLoss);
         tradeLog.setBalance(currentBalance);
+        tradeLog.setIndex(index);
         if (executedVolume.isPositive()){
             tradeLog.setTradeSide(TradeSide.BUY);
             return tradeLog;

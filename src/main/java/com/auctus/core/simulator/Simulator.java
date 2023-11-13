@@ -129,12 +129,12 @@ public class Simulator<T extends AbstractTradingSystem> {
         balanceSnapshots.add(balanceSnapshot);
     }
 
-    private void analyzeOrders(List<Order> orders) {
+    private void analyzeOrders() {
         Num currentClose = tradingSystem.getBarSeriesProvider().getBaseBarSeries().getLastBar().getClosePrice();
         ZonedDateTime currentTime = tradingSystem.getBarSeriesProvider().getBaseBarSeries().getLastBar().getEndTime();
-        checkOrdersForExpirations(orders,currentTime);
-        List<Order> stopMarketOrders = OrderUtil.getSelectedOrders(orders, OrderType.STOP_MARKET, currentClose);
-        List<Order> limitOrders = OrderUtil.getSelectedOrders(orders, OrderType.LIMIT, currentClose);
+        checkOrdersForExpirations(tradingSystem.getActiveOrders(),currentTime);
+        List<Order> stopMarketOrders = OrderUtil.getSelectedOrders(tradingSystem.getActiveOrders(), OrderType.STOP_MARKET, currentClose);
+        List<Order> limitOrders = OrderUtil.getSelectedOrders(tradingSystem.getActiveOrders(), OrderType.LIMIT, currentClose);
 
         stopMarketOrders.forEach(this::processOrder);
         limitOrders.forEach(this::processOrder);
@@ -149,7 +149,7 @@ public class Simulator<T extends AbstractTradingSystem> {
         if (tradingSystem.getRunningPosition().isShort()) {
             tradingSystem.onExitSellCondition();
         }
-        List<Order> marketOrders = OrderUtil.getSelectedOrders(orders, OrderType.MARKET, currentClose);
+        List<Order> marketOrders = OrderUtil.getSelectedOrders(tradingSystem.getActiveOrders(), OrderType.MARKET, currentClose);
         marketOrders.forEach(this::processOrder);
     }
 
@@ -168,14 +168,14 @@ public class Simulator<T extends AbstractTradingSystem> {
     }
 
     private void processOrders() {
-        List<Order> activeOrders = tradingSystem.getActiveOrders();
-        analyzeOrders(activeOrders);
+        analyzeOrders();
     }
 
     private void processOrder(Order order) {
         if (order == null || order.getVolume().isZero()) return;
         Num orderVolume = order.getVolume();
         Bar lastCandle = this.tradingSystem.getBarSeriesProvider().getBaseBarSeries().getLastBar();
+        int index = this.tradingSystem.getBarSeriesProvider().getBaseBarSeries().getBarCount()-1;
         Position position = this.tradingSystem.getRunningPosition();
         Num executedPrice;
         Num newNetSize;
@@ -270,12 +270,12 @@ public class Simulator<T extends AbstractTradingSystem> {
             //this means that position size was reduced
             Num realizedProfitAndLoss = deltaPositionSize.multipliedBy(position.getAverageEntryPrice().minus(executedPrice));
             tradingSystem.addBalance(realizedProfitAndLoss);
-            tradeLog = TradeLog.createLog(tradingSystem.getSymbol(), deltaPositionSize, executedPrice, lastCandle.getEndTime(), realizedProfitAndLoss, getBalance());
+            tradeLog = TradeLog.createLog(tradingSystem.getSymbol(), deltaPositionSize, executedPrice, lastCandle.getEndTime(), realizedProfitAndLoss, getBalance(),index);
         } else if (newNetSize.abs().isZero() && position.getSize().isZero()) {
             tradingSystem.clearOrder(order);
             return;
         } else {
-            tradeLog = TradeLog.createLog(tradingSystem.getSymbol(), deltaPositionSize, executedPrice, lastCandle.getEndTime(), getBalance());
+            tradeLog = TradeLog.createLog(tradingSystem.getSymbol(), deltaPositionSize, executedPrice, lastCandle.getEndTime(), getBalance(),index);
         }
 
 
@@ -291,7 +291,7 @@ public class Simulator<T extends AbstractTradingSystem> {
     }
 
     public List<TradeLog> getClosedTrades() {
-        return tradeHistory.stream().filter(i -> i.getRealizedProfitAndLoss() != null).collect(Collectors.toList());
+        return tradeHistory.stream().filter(i -> !i.getRealizedProfitAndLoss().isZero()).collect(Collectors.toList());
     }
 
     public List<TradeLog> getAllTrades() {

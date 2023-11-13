@@ -3,6 +3,7 @@
 target/**
 services
 strategies
+data
 Main.java
 *.iml
 *.log
